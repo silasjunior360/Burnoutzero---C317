@@ -26,6 +26,7 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import api from '../services/api';
 
 type SnackbarSeverity = 'success' | 'error' | 'warning' | 'info';
 
@@ -131,13 +132,25 @@ export default function Funcionario() {
     setOpenDialog(true);
   };
 
-  const handleConfirmarAgendamento = () => {
-    setOpenDialog(false);
-    setSnackbar({
-      open: true,
-      message: `Consulta agendada com ${selectedPsicologo?.nome} para ${selectedHorario}.`,
-      severity: 'success',
-    });
+  const handleConfirmarAgendamento = async () => {
+    try {
+      await api.post('/agendamentos/', {
+        nome_psicologo: selectedPsicologo?.nome,
+        data_hora: selectedHorario
+      });
+      setOpenDialog(false);
+      setSnackbar({
+        open: true,
+        message: `Consulta agendada com ${selectedPsicologo?.nome} para ${selectedHorario}.`,
+        severity: 'success',
+      });
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: 'Erro ao agendar consulta.',
+        severity: 'error',
+      });
+    }
   };
 
   const handleCloseSnackbar = () => {

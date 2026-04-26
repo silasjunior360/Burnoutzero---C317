@@ -4,6 +4,8 @@ services:
     container_name: burnoutzero-backend
     ports:
       - "${DOCKER_BACKEND_PORT}:8000"
+    volumes:
+      - ./backend:/app
     env_file:
       - ./.env
     environment:

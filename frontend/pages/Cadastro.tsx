@@ -22,6 +22,7 @@ import {
   FormLabel
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import PersonIcon from '@mui/icons-material/Person';
@@ -100,7 +101,7 @@ export default function Cadastro() {
     return true;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (activeStep === 0 && !validarStep1()) return;
     if (activeStep === 1 && !validarStep2()) return;
     if (activeStep === 2) {
@@ -108,9 +109,23 @@ export default function Cadastro() {
         setError('Você precisa aceitar os termos LGPD');
         return;
       }
-      // Simular cadastro
-      alert('Cadastro realizado com sucesso! Faça login.');
-      navigate('/login');
+      
+      try {
+        await api.post('/auth/register/', {
+          username: formData.usuario,
+          email: formData.email,
+          password: formData.senha,
+          first_name: formData.nome.split(' ')[0],
+          last_name: formData.nome.split(' ').slice(1).join(' '),
+          role: formData.perfil,
+          departamento: formData.empresa
+        });
+        
+        alert('Cadastro realizado com sucesso! Faça login.');
+        navigate('/login');
+      } catch (err: any) {
+        setError('Erro ao realizar o cadastro. Verifique os dados ou se o usuário já existe.');
+      }
       return;
     }
     setActiveStep((prev) => prev + 1);

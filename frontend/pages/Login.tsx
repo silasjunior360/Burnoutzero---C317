@@ -14,6 +14,7 @@ import {
   Container
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
+import api from '../services/api';
 import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import EmailIcon from '@mui/icons-material/Email';
@@ -23,7 +24,7 @@ import PsychologyIcon from '@mui/icons-material/Psychology';
 export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,22 +34,34 @@ export default function Login() {
     setError('');
     setLoading(true);
 
-    // Simulação de login - depois substituir por chamada real à API
-    setTimeout(() => {
-      if (email && password) {
-        // Simulação de perfis baseado no email
-        if (email.includes('psicologo')) {
-          navigate('/psicologo');
-        } else if (email.includes('gestor')) {
-          navigate('/gestor');
-        } else {
-          navigate('/funcionario');
-        }
+    try {
+      const response = await api.post('/auth/login/', {
+        username: username,
+        password: password
+      });
+      
+      localStorage.setItem('access_token', response.data.access);
+      localStorage.setItem('refresh_token', response.data.refresh);
+      
+      const userResponse = await api.get('/users/me/');
+      const userData = userResponse.data;
+      
+      if (userData.role === 'psicologo') {
+        navigate('/psicologo');
+      } else if (userData.role === 'gestor') {
+        navigate('/gestor');
       } else {
-        setError('E-mail ou senha inválidos');
+        navigate('/funcionario');
       }
+    } catch (err: any) {
+      if (err.response && err.response.status === 401) {
+        setError('Usuário ou senha inválidos');
+      } else {
+        setError('Ocorreu um erro ao fazer login. Tente novamente.');
+      }
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -83,13 +96,13 @@ export default function Login() {
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label="E-mail"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              label="Usuário"
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
               margin="normal"
               required
-              placeholder="seu@email.com"
+              placeholder="Seu nome de usuário"
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">
