@@ -19,7 +19,6 @@ class ApiViewsTestCase(APITestCase):
             username='psico', password='password', role='psychologist', department='Saude'
         )
 
-
     def test_assessment_create_and_gamification(self):
         self.client.force_authenticate(user=self.employee)
         data = {
@@ -83,25 +82,25 @@ class ApiViewsTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_insight_logic_levels(self):
-        actor = getattr(self, 'funcionario', self.employee)
+        actor = self.employee
         self.client.force_authenticate(user=actor)
 
-        data_low = {'estresse': 5, 'ansiedade': 5, 'burnout': 0, 'depressao': 0}
-        self.client.post(reverse('avaliacao-list'), data_low)
-        insight_low = Insight.objects.filter(employee=actor).latest('gerado_em')
-        self.assertIn("indicadores estão dentro da faixa esperada", insight_low.texto)
-        self.assertIn("hábitos saudáveis", insight_low.recomendacoes)
+        data_low = {'stress': 5, 'anxiety': 5, 'burnout': 0, 'depression': 0}
+        self.client.post(reverse('assessment-list'), data_low)
+        insight_low = Insight.objects.filter(employee=actor).latest('generated_at')
+        self.assertIn("indicadores estão dentro da faixa esperada", insight_low.text)
+        self.assertIn("hábitos saudáveis", insight_low.recommendations)
 
-        data_med = {'estresse': 10, 'ansiedade': 10, 'burnout': 5, 'depressao': 0}
-        self.client.post(reverse('avaliacao-list'), data_med)
-        insight_med = Insight.objects.filte(employee=actor).latest('gerado_em')
-        self.assertIn("Sinais moderados", insight_med.texto)
-        self.assertIn("Pratique pausas regulares", insight_med.recomendacoes)
+        data_med = {'stress': 10, 'anxiety': 10, 'burnout': 5, 'depression': 0}
+        self.client.post(reverse('assessment-list'), data_med)
+        insight_med = Insight.objects.filter(employee=actor).latest('generated_at')
+        self.assertIn("Sinais moderados", insight_med.text)
+        self.assertIn("Pratique pausas regulares", insight_med.recommendations)
 
-        data_high = {'estresse': 20, 'ansiedade': 20, 'burnout': 10, 'depressao': 5}
-        self.client.post(reverse('avaliacao-list'), data_high)
-        insight_high = Insight.objects.filter(employee=actor).latest('gerado_em')
-        self.assertIn("risco elevado", insight_high.texto)
-        self.assertIn("Estresse acima do esperado", insight_high.texto)
-        self.assertIn("psicólogo o quanto antes", insight_high.recomendacoes)
-        self.assertIn("atividades de descompressão", insight_high.recomendacoes)
+        data_high = {'stress': 20, 'anxiety': 20, 'burnout': 10, 'depression': 5}
+        self.client.post(reverse('assessment-list'), data_high)
+        insight_high = Insight.objects.filter(employee=actor).latest('generated_at')
+        self.assertIn("risco elevado", insight_high.text)
+        self.assertIn("Estresse acima do esperado", insight_high.text)
+        self.assertIn("psicólogo o quanto antes", insight_high.recommendations)
+        self.assertIn("atividades de descompressão", insight_high.recommendations)
