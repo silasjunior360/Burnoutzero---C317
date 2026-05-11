@@ -134,7 +134,8 @@ def _generate_insight(employee, assessment):
     )
 
 
-# ── Insights ──────────────────────────────────────────────────────────────────
+# ── Insights ─────────────────────────────────────────────────────────────
+
 
 class InsightViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [IsAuthenticated]
@@ -176,7 +177,8 @@ def validate_insight(request, pk):
     return Response({'message': 'Insight validado.'})
 
 
-# ── Dashboard Gestor ──────────────────────────────────────────────────────────
+# ── Dashboard Gestor ─────────────────────────────────────────────────────
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -196,7 +198,8 @@ def team_overview(request):
     return Response({'averages': agg, 'recent_alerts': list(alerts)})
 
 
-# ── Gamificação ───────────────────────────────────────────────────────────────
+# ── Gamificação ──────────────────────────────────────────────────────────
+
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

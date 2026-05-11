@@ -80,3 +80,26 @@ class ApiViewsTestCase(APITestCase):
             'date_time': '10:00'
         })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+    def test_insight_logic_levels(self):
+        self.client.force_authenticate(user=self.funcionario)
+
+        data_low = {'estresse': 5, 'ansiedade': 5, 'burnout': 0, 'depressao': 0}
+        self.client.post(reverse('avaliacao-list'), data_low)
+        insight_low = Insight.objects.filter(funcionario=self.funcionario).latest('gerado_em')
+        self.assertIn("indicadores estão dentro da faixa esperada", insight_low.texto)
+        self.assertIn("hábitos saudáveis", insight_low.recomendacoes)
+
+        data_med = {'estresse': 10, 'ansiedade': 10, 'burnout': 5, 'depressao': 0}
+        self.client.post(reverse('avaliacao-list'), data_med)
+        insight_med = Insight.objects.filter(funcionario=self.funcionario).latest('gerado_em')
+        self.assertIn("Sinais moderados", insight_med.texto)
+        self.assertIn("Pratique pausas regulares", insight_med.recomendacoes)
+
+        data_high = {'estresse': 20, 'ansiedade': 20, 'burnout': 10, 'depressao': 5}
+        self.client.post(reverse('avaliacao-list'), data_high)
+        insight_high = Insight.objects.filter(funcionario=self.funcionario).latest('gerado_em')
+        self.assertIn("risco elevado", insight_high.texto)
+        self.assertIn("Estresse acima do esperado", insight_high.texto)
+        self.assertIn("psicólogo o quanto antes", insight_high.recomendacoes)
+        self.assertIn("atividades de descompressão", insight_high.recomendacoes)
