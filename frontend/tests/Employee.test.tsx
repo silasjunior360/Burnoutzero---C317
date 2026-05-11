@@ -21,7 +21,7 @@ window.ResizeObserver = vi.fn().mockImplementation(() => ({
     observe: vi.fn(),
     unobserve: vi.fn(),
     disconnect: vi.fn(),
-})) as any;
+})) as unknown as typeof ResizeObserver;
 
 // Mock do ResponsiveContainer para evitar erros de renderização em testes
 vi.mock('recharts', async () => {
