@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach, MockedFunction } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { MockedFunction } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Employee from '../pages/Employee';
 import api from '../services/api';
@@ -16,11 +17,11 @@ const mockedPost = api.post as MockedFunction<typeof api.post>;
 const mockedGet = api.get as MockedFunction<typeof api.get>;
 
 // Mock do ResizeObserver que o Recharts usa
-global.ResizeObserver = vi.fn().mockImplementation(() => ({
+window.ResizeObserver = vi.fn().mockImplementation(() => ({
     observe: vi.fn(),
     unobserve: vi.fn(),
     disconnect: vi.fn(),
-}));
+})) as any;
 
 // Mock do ResponsiveContainer para evitar erros de renderização em testes
 vi.mock('recharts', async () => {
