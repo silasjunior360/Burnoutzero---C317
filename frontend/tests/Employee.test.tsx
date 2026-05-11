@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, MockedFunction } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Employee from '../pages/Employee';
 import api from '../services/api';
@@ -11,6 +11,9 @@ vi.mock('../services/api', () => ({
     get: vi.fn(),
   },
 }));
+
+const mockedPost = api.post as MockedFunction<typeof api.post>;
+const mockedGet = api.get as MockedFunction<typeof api.get>;
 
 // Mock do ResizeObserver que o Recharts usa
 global.ResizeObserver = vi.fn().mockImplementation(() => ({
@@ -24,7 +27,7 @@ vi.mock('recharts', async () => {
   const original = await vi.importActual('recharts');
   return {
     ...original,
-    ResponsiveContainer: ({ children }: any) => <div style={{ width: '100%', height: '100%' }}>{children}</div>,
+    ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div style={{ width: '100%', height: '100%' }}>{children}</div>,
   };
 });
 
@@ -32,7 +35,7 @@ describe('Employee Dashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Respostas padrão para os mocks
-    (api.get as any).mockImplementation((url: string) => {
+    mockedGet.mockImplementation((url: string): Promise<unknown> => {
         if (url === '/assessments/') return Promise.resolve({ data: [] });
         if (url === '/insights/') return Promise.resolve({ data: [] });
         if (url === '/gamification/my-points/') return Promise.resolve({ data: { total_pontos: 100 } });
@@ -56,7 +59,7 @@ describe('Employee Dashboard', () => {
   });
 
   it('should open and submit new assessment', async () => {
-    (api.post as any).mockResolvedValueOnce({ data: {} });
+    mockedPost.mockResolvedValueOnce({ data: {} } as never);
 
     render(
       <MemoryRouter>

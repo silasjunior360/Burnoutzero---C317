@@ -17,13 +17,13 @@ window.ResizeObserver = vi.fn().mockImplementation(() => ({
     observe: vi.fn(),
     unobserve: vi.fn(),
     disconnect: vi.fn(),
-})) as any;
+}));
 
 vi.mock('recharts', async () => {
   const original = await vi.importActual('recharts');
   return {
     ...original,
-    ResponsiveContainer: ({ children }: any) => <div style={{ width: '100%', height: '100%' }}>{children}</div>,
+    ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div style={{ width: '100%', height: '100%' }}>{children}</div>,
   };
 });
 
