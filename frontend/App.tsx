@@ -4,6 +4,7 @@ import CssBaseline from '@mui/material/CssBaseline';
 import { theme } from './theme';
 import Header from './components/Header';
 import Footer from './components/Footer';
+import ProtectedRoute from './components/ProtectedRoute';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -24,9 +25,19 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            <Route path="/employee" element={<Employee />} />
-            <Route path="/psychologist" element={<Psychologist />} />
-            <Route path="/manager" element={<Manager />} />
+            
+            {/* Rotas Protegidas */}
+            <Route element={<ProtectedRoute allowedRoles={['employee', 'psychologist', 'manager']} />}>
+              <Route path="/employee" element={<Employee />} />
+            </Route>
+
+            <Route element={<ProtectedRoute allowedRoles={['psychologist']} />}>
+              <Route path="/psychologist" element={<Psychologist />} />
+            </Route>
+
+            <Route element={<ProtectedRoute allowedRoles={['manager']} />}>
+              <Route path="/manager" element={<Manager />} />
+            </Route>
           </Routes>
         </main>
         <Footer />
