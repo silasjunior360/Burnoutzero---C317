@@ -1,7 +1,7 @@
 // frontend/App.tsx
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { theme } from './theme';
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -18,7 +18,6 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <BrowserRouter>
         <Header />
         <main style={{ minHeight: 'calc(100vh - 140px)', padding: '24px', backgroundColor: '#f5f5f5' }}>
           <Routes>
@@ -40,7 +39,6 @@ function App() {
           </Routes>
         </main>
         <Footer />
-      </BrowserRouter>
     </ThemeProvider>
   );
 }
