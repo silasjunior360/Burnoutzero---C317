@@ -1,13 +1,12 @@
 // frontend/App.tsx
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { theme } from './theme';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
-import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Employee from './pages/Employee';
@@ -23,14 +22,10 @@ function App() {
         <Header />
         <main style={{ minHeight: 'calc(100vh - 140px)', padding: '24px', backgroundColor: '#f5f5f5' }}>
           <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route element={<ProtectedRoute />}> 
-              <Route path="/home" element={<Home />} />
-            </Route>
+            <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
-            
-            {/* Rotas Protegidas */}
+
             <Route element={<ProtectedRoute allowedRoles={['employee', 'psychologist', 'manager']} />}>
               <Route path="/employee" element={<Employee />} />
             </Route>

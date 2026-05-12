@@ -1,13 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { theme } from '../theme';
 
 const BurnoutZeroLanding = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-
   useEffect(() => {
     const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50);
+      // Scroll detection logic
     };
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
@@ -441,3 +439,4 @@ const BurnoutZeroLanding = () => {
 };
 
 export default BurnoutZeroLanding;
+

@@ -1,11 +1,8 @@
 // frontend/components/Header.tsx
-import { useState, type MouseEvent } from 'react';
 import { 
-  AppBar, Toolbar, Typography, Button, Box, Container, 
-  Avatar, Menu, MenuItem, IconButton 
+  AppBar, Toolbar, Typography, Box, Container
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import MenuIcon from '@mui/icons-material/Menu';
 
 export default function Header() {
   const navigate = useNavigate();
