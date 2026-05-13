@@ -23,7 +23,7 @@ const BurnoutZeroLanding = () => {
           --bg-paper: ${theme.palette.background.paper};
           --text-primary: ${theme.palette.text.primary};
           --text-secondary: ${theme.palette.text.secondary};
-          --divider: ${theme.palette.divider || '#e2e8f0'};
+          --divider: ${theme.palette.divider || '#a6c8f5'};
           --accent-warning: ${theme.palette.warning?.main || '#FFB347'};
           --accent-error: ${theme.palette.error?.main || '#FF6B6B'};
         }
