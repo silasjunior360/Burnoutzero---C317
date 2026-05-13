@@ -19,7 +19,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
         <Header />
-        <main style={{ minHeight: 'calc(100vh - 140px)', padding: '24px', backgroundColor: '#f5f5f5' }}>
+        <main style={{ minHeight: 'calc(100vh - 140px)', padding: '0px', backgroundColor: '#f5f5f5' }}>
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/login" element={<Login />} />

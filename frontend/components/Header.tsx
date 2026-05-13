@@ -1,38 +1,155 @@
 // frontend/components/Header.tsx
 import { 
-  AppBar, Toolbar, Typography, Box, Container
+  AppBar, Toolbar, Typography, Box, Container, IconButton, Menu, MenuItem, Avatar, Divider
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
+import SettingsIcon from '@mui/icons-material/Settings';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { useState } from 'react';
+import { useEffect } from 'react';
 
 export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
-  if (location.pathname === '/') return null;
-  // Simplified header: only brand displayed. Navigation and avatar removed for minimal top bar.
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [userName, setUserName] = useState('');
+  useEffect(() => {
+    let mounted = true;
+    import('../services/api').then(({ default: api }) => {
+      api.get('/users/me/').then((res) => {
+        if (!mounted) return;
+        const d = res.data || {};
+        const name = (d.first_name || d.username || d.email || 'Usuário') + (d.last_name ? ' ' + d.last_name : '');
+        setUserName(name);
+      }).catch(() => {});
+    });
+    return () => { mounted = false; };
+  }, []);
+  const isAuthPage = ['/login', '/register', '/'].includes(location.pathname);
+
+  const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleCloseUserMenu = () => {
+    setAnchorEl(null);
+  };
+
+  const handleSettings = () => {
+    handleCloseUserMenu();
+    navigate('/settings');
+  };
+
+  const handleLogout = () => {
+    handleCloseUserMenu();
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    navigate('/login');
+  };
 
   return (
     <AppBar position="sticky" color="default" elevation={1} sx={{ backgroundColor: 'background.paper' }}>
       <Container maxWidth="lg">
         <Toolbar disableGutters>
-          {/* Logo */}
-          <Typography
-            variant="h6"
-            component="div"
-            sx={{ 
-              flexGrow: 1, 
-              cursor: 'pointer',
-              background: 'linear-gradient(135deg, #147DAC 0%, #AE45AF 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              fontWeight: 700,
-            }}
-            onClick={() => navigate('/')}
-          >
-            Burnoutzero
-          </Typography>
+          {/* Logo e Home */}
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
+            {/* Logo */}
+            <Typography
+              variant="h6"
+              component="div"
+              sx={{ 
+                cursor: 'pointer',
+                background: 'linear-gradient(135deg, #147DAC 0%, #AE45AF 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontWeight: 700,
+              }}
+              onClick={() => navigate('/')}
+            >
+              Burnoutzero
+            </Typography>
 
-            {/* Empty space where navigation and avatar used to be - keeping header minimal */}
-            <Box sx={{ width: 48 }} />
+            {!isAuthPage && (
+              <>
+                {/* Divider */}
+                <Divider orientation="vertical" flexItem sx={{ my: 1 }} />
+
+                {/* Home Button */}
+                <Box
+                  component="button"
+                  onClick={() => navigate('/home')}
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 1,
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'text.primary',
+                    fontSize: '1rem',
+                    padding: '4px 8px',
+                    '&:hover': {
+                      opacity: 0.7,
+                    }
+                  }}
+                >
+                  <img 
+                    src="/favicon.svg" 
+                    alt="Home" 
+                    style={{ width: '24px', height: '24px' }}
+                  />
+                  <Box
+                    sx={{
+                      background: 'linear-gradient(135deg, #147DAC 0%, #AE45AF 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      fontWeight: 600,
+                      fontSize: '1rem'
+                    }}
+                  >
+                    Desafios
+                  </Box>
+                </Box>
+              </>
+            )}
+          </Box>
+
+          {!isAuthPage && (
+            <>
+              {/* Menu de Usuário */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <IconButton 
+                  onClick={handleOpenUserMenu}
+                  sx={{ p: 0 }}
+                  size="large"
+                >
+                  <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.main', cursor: 'pointer' }}>
+                    {userName.split(' ').map(n => n[0]).join('')}
+                  </Avatar>
+                </IconButton>
+                <Menu
+                  anchorEl={anchorEl}
+                  open={Boolean(anchorEl)}
+                  onClose={handleCloseUserMenu}
+                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                >
+                  <MenuItem disabled sx={{ opacity: 0.6 }}>
+                    <Typography variant="body2">{userName}</Typography>
+                  </MenuItem>
+                  <Divider />
+                  <MenuItem onClick={handleSettings}>
+                    <SettingsIcon sx={{ mr: 2 }} fontSize="small" />
+                    Configurações
+                  </MenuItem>
+                  <MenuItem onClick={handleLogout}>
+                    <LogoutIcon sx={{ mr: 2 }} fontSize="small" />
+                    Sair
+                  </MenuItem>
+                </Menu>
+              </Box>
+            </>
+          )}
         </Toolbar>
       </Container>
     </AppBar>

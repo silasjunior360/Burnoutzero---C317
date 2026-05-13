@@ -18,7 +18,6 @@ import Visibility from '@mui/icons-material/Visibility';
 import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import EmailIcon from '@mui/icons-material/Email';
 import LockIcon from '@mui/icons-material/Lock';
-import PsychologyIcon from '@mui/icons-material/Psychology';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -70,14 +69,19 @@ export default function Login() {
         <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
           {/* Logo e Título */}
           <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <PsychologyIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+            <img 
+              src="/favicon.svg" 
+              alt="Home" 
+              style={{ width: '60px', height: '60px', marginBottom: '16px' }}
+            />
             <Typography
               variant="h4"
-              sx={{
-                fontWeight: 700,
+              sx={{ 
+                cursor: 'pointer',
                 background: 'linear-gradient(135deg, #147DAC 0%, #AE45AF 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
+                fontWeight: 700,
               }}
             >
               BurnoutZero
