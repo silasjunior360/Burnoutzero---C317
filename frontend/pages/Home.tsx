@@ -17,6 +17,7 @@ import {
   DialogContent,
   DialogActions
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
   EmojiEvents as EmojiEventsIcon,
   TrendingUp as TrendingUpIcon,
@@ -460,7 +461,7 @@ const DailyWordsMission = ({ onCompleteXp }: { onCompleteXp: (xp: number) => voi
           </Box>
         </Box>
 
-        <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 2 }}>
+        <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, mb: 2 }}>
           <Typography variant="body2" color="text.secondary">
             Palavra atual
           </Typography>
@@ -550,7 +551,7 @@ const MoodChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void })
         sx={{
           p: 2,
           borderRadius: 2,
-          bgcolor: 'grey.50',
+          bgcolor: 'background.paper',
           mt: 2,
           cursor: 'pointer',
           minHeight: 140,
@@ -684,7 +685,7 @@ const StreakChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void 
   };
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1, mt: 2 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, mt: 2 }}>
       <Typography variant="h5" sx={{ fontWeight: 700 }}>
         🔥 {streakDays}
       </Typography>
@@ -804,6 +805,7 @@ const WaterChallenge = ({ onGainXp }: { onGainXp: (xp: number) => void }) => {
 };
 
 export default function Jornada() {
+  const theme = useTheme();
   const [user, setUser] = useState({
     nome: 'Usuário',
     titulo: '',
@@ -1034,7 +1036,7 @@ export default function Jornada() {
         sx={{
           p: 2,
           borderRadius: 2,
-          bgcolor: 'grey.50',
+          bgcolor: 'background.paper',
           height: '100%',
           display: 'flex',
           flexDirection: 'column'
@@ -1093,7 +1095,7 @@ export default function Jornada() {
         {/* Coluna principal (esquerda) */}
         <Grid size={{ xs: 12, md: 8 }}>
           {/* Desafios Diários: Respiração + Água */}
-            <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', bgcolor: 'grey.100' }}>
+            <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
               <Box sx={{ bgcolor: 'primary.main', px: 3, py: 2, color: 'white' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -1120,7 +1122,7 @@ export default function Jornada() {
             </Card>
 
           {/* Desafios Semanais */}
-          <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', bgcolor: 'grey.100' }}>
+          <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ bgcolor: 'primary.main', px: 3, py: 2, color: 'white' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -1152,7 +1154,7 @@ export default function Jornada() {
           </Card>
 
           {/* Seu equilíbrio semanal */}
-          <Card sx={{ borderRadius: 2, bgcolor: 'success.light', color: 'white' }}>
+          <Card sx={{ borderRadius: 2, bgcolor: theme.palette.mode === 'dark' ? 'rgba(20, 125, 172, 0.18)' : 'success.light', color: theme.palette.mode === 'dark' ? 'text.primary' : 'white', border: '1px solid', borderColor: 'divider' }}>
             <CardContent sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <TrendingUpIcon sx={{ fontSize: 40 }} />
@@ -1164,7 +1166,7 @@ export default function Jornada() {
                 </Box>
                 <Button
                   variant="contained"
-                  sx={{ bgcolor: 'white', color: 'success.main' }}
+                  sx={{ bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white', color: 'success.main' }}
                 >
                   ELOGIOS FEITOS
                 </Button>
@@ -1179,7 +1181,7 @@ export default function Jornada() {
         {/* Coluna lateral (direita) */}
         <Grid size={{ xs: 12, md: 4 }}>
           {/* Perfil do usuário */}
-          <Card sx={{ mb: 3, borderRadius: 2, textAlign: 'center' }}>
+          <Card sx={{ mb: 3, borderRadius: 2, textAlign: 'center', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
             <CardContent sx={{ p: 3 }}>
               <Avatar
                 sx={{
@@ -1240,7 +1242,7 @@ export default function Jornada() {
           </Card>
 
           {/* Conquistas Recentes */}
-          <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', bgcolor: 'grey.100' }}>
+          <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ bgcolor: 'primary.main', px: 3, py: 2, color: 'white' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -1266,7 +1268,7 @@ export default function Jornada() {
                         p: 2,
                         minHeight: 104,
                         borderRadius: 2,
-                        bgcolor: 'grey.50',
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'grey.50',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
