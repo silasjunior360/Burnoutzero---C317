@@ -17,13 +17,20 @@ export default function Header() {
   useEffect(() => {
     let mounted = true;
     import('../services/api').then(({ default: api }) => {
+      if (!api || !api.get) {
+        return;
+      }
       api.get('/users/me/').then((res) => {
         if (!mounted) return;
         const d = res.data || {};
         const name = (d.first_name || d.username || d.email || 'Usuário') + (d.last_name ? ' ' + d.last_name : '');
         setUserName(name);
         setUserAvatar(d.avatar || '');
-      }).catch(() => {});
+      }).catch(() => {
+        // ignore - keep defaults
+      });
+    }).catch(() => {
+      // ignore import errors
     });
     return () => { mounted = false; };
   }, []);
