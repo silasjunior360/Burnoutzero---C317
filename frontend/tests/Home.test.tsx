@@ -1,5 +1,6 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { expect, test, describe, vi, beforeEach } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import Home from '../pages/Home';
 
 const localStorageMock = (() => {
@@ -30,14 +31,22 @@ describe('Home (Jornada) Interactive Components', () => {
   });
 
   test('should render welcome message and main sections', () => {
-    render(<Home />);
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>
+    );
     expect(screen.getByText(/SUA JORNADA DE BEM-ESTAR/i)).toBeInTheDocument();
     expect(screen.getByText(/Desafios Diários/i)).toBeInTheDocument();
   });
 
   describe('Water Challenge', () => {
     test('should increment water consumption when clicking drink button', () => {
-      render(<Home />);
+      render(
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>
+      );
       
       const drinkButton = screen.getByRole('button', { name: /Beber 200ml/i });
       
@@ -47,7 +56,11 @@ describe('Home (Jornada) Interactive Components', () => {
     });
 
     test('should show cooldown message after drinking', () => {
-      render(<Home />);
+      render(
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>
+      );
       const drinkButton = screen.getByRole('button', { name: /Beber 200ml/i });
       
       fireEvent.click(drinkButton);
@@ -59,7 +72,11 @@ describe('Home (Jornada) Interactive Components', () => {
 
   describe('Breathing Exercise', () => {
     test('should start breathing exercise when clicking iniciar', () => {
-      render(<Home />);
+      render(
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>
+      );
       
       const startButton = screen.getByRole('button', { name: 'Iniciar' });
       fireEvent.click(startButton);
@@ -69,7 +86,11 @@ describe('Home (Jornada) Interactive Components', () => {
     });
 
     test('should cycle through breathing phases', () => {
-      render(<Home />);
+      render(
+        <MemoryRouter>
+          <Home />
+        </MemoryRouter>
+      );
       
       const startButton = screen.getByRole('button', { name: 'Iniciar' });
       fireEvent.click(startButton);

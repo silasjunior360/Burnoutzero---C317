@@ -861,6 +861,9 @@ export default function Jornada() {
   useEffect(() => {
     let mounted = true;
     import('../services/api').then(({ default: api }) => {
+      if (!api || !api.get) {
+        return;
+      }
       api.get('/users/me/').then((res) => {
         if (!mounted) return;
         const data = res.data || {};
@@ -911,6 +914,8 @@ export default function Jornada() {
         // ignore - keep defaults
         // eslint-disable-next-line no-empty
       });
+    }).catch(() => {
+      // ignore import errors
     });
 
     return () => { mounted = false; };
