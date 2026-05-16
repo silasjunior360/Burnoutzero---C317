@@ -805,7 +805,9 @@ const WaterChallenge = ({ onGainXp }: { onGainXp: (xp: number) => void }) => {
 };
 
 export default function Jornada() {
+
   const theme = useTheme();
+
   const [user, setUser] = useState({
     nome: 'Usuário',
     titulo: '',
@@ -863,6 +865,7 @@ export default function Jornada() {
   useEffect(() => {
     let mounted = true;
     import('../services/api').then(({ default: api }) => {
+
       api.get('/users/me/').then((res) => {
         if (!mounted) return;
         const data = res.data || {};
@@ -911,7 +914,9 @@ export default function Jornada() {
         setTotalXp(profile.xp);
       }).catch(() => {
         // ignore - keep defaults
+
       });
+
     });
 
     return () => { mounted = false; };

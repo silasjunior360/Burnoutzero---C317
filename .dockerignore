@@ -2,3 +2,5 @@
 *.pyc
 __pycache__
 redis-data
+Dockerfile
+db.sqlite3
