@@ -23,7 +23,7 @@ function AppShell() {
     <>
         <Header />
 
-        <Box component="main" sx={{ minHeight: 'calc(100vh - 140px)', p: 0, bgcolor: theme.palette.background.default }
+        <Box component="main" sx={{ minHeight: 'calc(100vh - 140px)', p: 0, bgcolor: theme.palette.background.default }}>
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/home" element={<Home />} />
