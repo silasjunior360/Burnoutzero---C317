@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import { CssBaseline, ThemeProvider } from '@mui/material';
 import { createAppTheme, type AppThemeMode } from './theme';
 
+/* eslint-disable react-refresh/only-export-components */
+
 type ThemeContextValue = {
   mode: AppThemeMode;
   toggleTheme: () => void;

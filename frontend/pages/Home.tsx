@@ -868,7 +868,17 @@ export default function Jornada() {
         const data = res.data || {};
         const nome = (data.first_name || data.username || data.email || 'Usuário') + (data.last_name ? ' ' + data.last_name : '');
         const username = data.username || '';
-        const profile: any = {
+        const profile: {
+          nome: string;
+          titulo: string;
+          avatar: string;
+          xp: number;
+          xpProximo: number;
+          pontos: number;
+          diasAtivo: number;
+          level: number;
+          username: string;
+        } = {
           nome,
           titulo: '',
           avatar: (data.first_name ? data.first_name[0] : (data.username ? data.username[0] : 'U')) + (data.last_name ? data.last_name[0] : ''),
@@ -893,7 +903,9 @@ export default function Jornada() {
           const storedPontos = readStorage<number>('burnout-zero-pontos', profile.pontos || 0);
           profile.pontos = storedPontos;
           profile.xp = storedPontos;
-        } catch {}
+        } catch {
+          // ignore read storage errors
+        }
 
         setUser(profile);
         setTotalXp(profile.xp);
@@ -919,7 +931,9 @@ export default function Jornada() {
       };
       try {
         writeStorage('burnout-zero-pontos', next.pontos);
-      } catch {}
+      } catch {
+        // ignore write storage errors
+      }
       return next;
     });
   };

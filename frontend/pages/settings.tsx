@@ -137,7 +137,7 @@ export default function Settings() {
 		return () => {
 			active = false;
 		};
-	}, []);
+	}, [navigate]);
 
 	const updateProfileField = (field: keyof ProfileForm) => (
 		event: React.ChangeEvent<HTMLInputElement>
