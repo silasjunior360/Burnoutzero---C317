@@ -1,9 +1,12 @@
-from rest_framework import generics, viewsets
+from rest_framework import generics, viewsets, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.db.models import Avg
 from django.utils import timezone
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 from .models import User, Assessment, FollowUp, Appointment, Insight, GamificationPoints
 
 from .serializers import (
@@ -20,12 +23,54 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = UserCreateSerializer
 
 
-class UserDetailView(generics.RetrieveAPIView):
+class UserDetailView(generics.RetrieveUpdateAPIView):
     permission_classes = (IsAuthenticated,)
     serializer_class = UserSerializer
 
     def get_object(self):
         return self.request.user
+
+
+class UserPasswordChangeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        current_password = request.data.get('current_password', '')
+        new_password = request.data.get('new_password', '')
+        confirm_password = request.data.get('confirm_password', '')
+
+        if not current_password or not new_password or not confirm_password:
+            return Response(
+                {'error': 'Preencha a senha atual e a nova senha.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not request.user.check_password(current_password):
+            return Response(
+                {'error': 'A senha atual está incorreta.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if new_password != confirm_password:
+            return Response(
+                {'error': 'A confirmação da nova senha não confere.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            validate_password(new_password, user=request.user)
+        except ValidationError as exc:
+            return Response(
+                {'error': exc.messages[0]},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        request.user.set_password(new_password)
+        request.user.save(update_fields=['password'])
+        return Response(
+            {'message': 'Senha alterada com sucesso.'},
+            status=status.HTTP_200_OK,
+        )
 
 
 class AssessmentViewSet(viewsets.ModelViewSet):

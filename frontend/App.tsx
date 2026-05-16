@@ -1,8 +1,7 @@
 // frontend/App.tsx
-import { ThemeProvider } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
+import { Box } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { Routes, Route } from 'react-router-dom';
-import { theme } from './theme';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -13,19 +12,27 @@ import Register from './pages/Register';
 import Employee from './pages/Employee';
 import Psychologist from './pages/Psychologist';
 import Manager from './pages/Manager';
+import Settings from './pages/settings';
+import { ThemeModeProvider } from './theme-context';
 import './index.css';
 
-function App() {
+function AppShell() {
+  const theme = useTheme();
+
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <>
         <Header />
-        <main style={{ minHeight: 'calc(100vh - 140px)', padding: '0px', backgroundColor: '#f5f5f5' }}>
+
+        <Box component="main" sx={{ minHeight: 'calc(100vh - 140px)', p: 0, bgcolor: theme.palette.background.default }
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/home" element={<Home />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+
+            <Route element={<ProtectedRoute />}>
+              <Route path="/settings" element={<Settings />} />
+            </Route>
 
             <Route element={<ProtectedRoute allowedRoles={['employee', 'psychologist', 'manager']} />}>
               <Route path="/employee" element={<Employee />} />
@@ -39,9 +46,17 @@ function App() {
               <Route path="/manager" element={<Manager />} />
             </Route>
           </Routes>
-        </main>
+        </Box>
         <Footer />
-    </ThemeProvider>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <ThemeModeProvider>
+      <AppShell />
+    </ThemeModeProvider>
   );
 }
 

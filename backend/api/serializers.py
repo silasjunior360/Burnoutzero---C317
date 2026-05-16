@@ -8,8 +8,10 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email',
             'first_name', 'last_name',
+            'avatar',
             'role', 'department'
         ]
+        read_only_fields = ['id', 'role', 'department']
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
