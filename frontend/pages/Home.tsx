@@ -86,6 +86,36 @@ const normalizeText = (value?: string) =>
     .toLowerCase()
     .trim();
 
+const resolveHomeRouteFromUser = (userData: {
+  role?: string;
+  user_type?: string;
+  userType?: string;
+  tipo?: string;
+  tipo_usuario?: string;
+  profile_type?: string;
+}) => {
+  const rawType =
+    userData.role ||
+    userData.user_type ||
+    userData.userType ||
+    userData.tipo ||
+    userData.tipo_usuario ||
+    userData.profile_type ||
+    'employee';
+
+  const normalizedType = normalizeText(rawType);
+
+  if (normalizedType.includes('manager') || normalizedType.includes('gerente')) {
+    return '/manager';
+  }
+
+  if (normalizedType.includes('psychologist') || normalizedType.includes('psicologo') || normalizedType.includes('psicologa')) {
+    return '/psychologist';
+  }
+
+  return '/employee';
+};
+
 const AchievementIcon = ({ badge, title }: { badge?: string; title?: string }) => {
   const key = normalizeText(title || badge);
   const map: Record<string, { icon?: string; bg: string }> = {
@@ -821,6 +851,7 @@ export default function Jornada() {
   });
 
   const [totalXp, setTotalXp] = useState(user.xp);
+  const [backRoute, setBackRoute] = useState('/employee');
   const [selectedConquestIndex, setSelectedConquestIndex] = useState<number | null>(null);
   const [openRewards, setOpenRewards] = useState(false);
   const [openObtainedConquests, setOpenObtainedConquests] = useState(false);
@@ -869,6 +900,7 @@ export default function Jornada() {
       api.get('/users/me/').then((res) => {
         if (!mounted) return;
         const data = res.data || {};
+        setBackRoute(resolveHomeRouteFromUser(data));
         const nome = (data.first_name || data.username || data.email || 'Usuário') + (data.last_name ? ' ' + data.last_name : '');
         const username = data.username || '';
         const profile: {
@@ -1096,8 +1128,8 @@ export default function Jornada() {
           Olá, {user.nome}! Vamos começar sua jornada de hoje?
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="outlined" onClick={() => navigate('/employee')} sx={{ borderRadius: 2 }}>
-            Voltar para Funcionário
+          <Button variant="outlined" onClick={() => navigate(backRoute)} sx={{ borderRadius: 2 }}>
+            Voltar
           </Button>
           <Button
             variant="outlined"

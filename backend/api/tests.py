@@ -38,9 +38,15 @@ class ApiViewsTestCase(APITestCase):
         self.assertEqual(response3.status_code, status.HTTP_200_OK)
 
     def test_team_overview(self):
+        User.objects.create_user(
+            username='psico_ti', password='password', role='psychologist', department='TI'
+        )
         self.client.force_authenticate(user=self.manager)
         response = self.client.get(reverse('team_overview'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('team_members', response.data)
+        self.assertIn('total_team_members', response.data)
+        self.assertEqual(response.data['total_team_members'], 2)
 
         self.client.force_authenticate(user=self.employee)
         response2 = self.client.get(reverse('team_overview'))

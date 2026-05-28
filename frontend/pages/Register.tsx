@@ -116,7 +116,7 @@ export default function Register() {
           first_name: formData.nome.split(' ')[0],
           last_name: formData.nome.split(' ').slice(1).join(' '),
           role: formData.perfil,
-          departamento: formData.empresa
+          department: formData.empresa
         });
         
         alert('Cadastro realizado com sucesso! Faça login.');
