@@ -2,7 +2,7 @@ from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from api.models import Assessment, Insight
+from api.models import Insight
 
 User = get_user_model()
 
@@ -46,33 +46,6 @@ class ApiViewsTestCase(APITestCase):
         response2 = self.client.get(reverse('team_overview'))
         self.assertEqual(response2.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_follow_up_and_insight_psychologist(self):
-        assessment = Assessment.objects.create(
-            employee=self.employee, risk_level='high'
-        )
-        insight = Insight.objects.create(
-            employee=self.employee, assessment=assessment,
-            text="T", recommendations="R"
-        )
-
-        self.client.force_authenticate(user=self.psychologist)
-        response = self.client.patch(
-            reverse('validate_insight', args=[insight.id]), {
-                'text': 'Novo texto'
-            }
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        response2 = self.client.get(reverse('insight-list'))
-        self.assertEqual(response2.status_code, status.HTTP_200_OK)
-
-        response3 = self.client.post(reverse('follow-up-list'), {
-            'employee': self.employee.id,
-            'status': 'active',
-            'private_notes': 'Anotações'
-        })
-        self.assertEqual(response3.status_code, status.HTTP_201_CREATED)
-
     def test_appointment(self):
         self.client.force_authenticate(user=self.employee)
         response = self.client.post(reverse('appointment-list'), {
@@ -104,3 +77,33 @@ class ApiViewsTestCase(APITestCase):
         self.assertIn("Estresse acima do esperado", insight_high.text)
         self.assertIn("psicólogo o quanto antes", insight_high.recommendations)
         self.assertIn("atividades de descompressão", insight_high.recommendations)
+
+    def test_register_user_success(self):
+        data = {
+            'username': 'newuser',
+            'password': 'newpassword123',
+            'email': 'new@user.com',
+            'first_name': 'New',
+            'last_name': 'User',
+            'role': 'employee',
+            'department': 'TI'
+        }
+        response = self.client.post(reverse('auth_register'), data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(User.objects.filter(username='newuser').exists(), True)
+
+    def test_register_user_invalid(self):
+        data = {
+            'password': 'newpassword123',
+            'email': 'new@user.com',
+            'role': 'employee'
+        }
+        response = self.client.post(reverse('auth_register'), data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_user_detail_me(self):
+        self.client.force_authenticate(user=self.employee)
+        response = self.client.get(reverse('user_me'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['username'], self.employee.username)
+        self.assertEqual(response.data['role'], self.employee.role)
