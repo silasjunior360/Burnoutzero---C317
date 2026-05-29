@@ -63,33 +63,24 @@ describe('Register Page', () => {
       </MemoryRouter>
     );
 
-    // Fill Step 1
     fireEvent.change(screen.getByLabelText(/Nome completo/i), { target: { value: 'Silas Junior' } });
     fireEvent.change(screen.getByLabelText(/E-mail/i), { target: { value: 'silas@email.com' } });
     fireEvent.change(screen.getByLabelText(/Usuário/i), { target: { value: 'silas123' } });
-    
+
     const passwordFields = screen.getAllByLabelText(/Senha/i);
     fireEvent.change(passwordFields[0], { target: { value: 'password123' } });
     fireEvent.change(screen.getByLabelText(/Confirmar senha/i), { target: { value: 'password123' } });
-
-    // Go to Step 2
     fireEvent.click(screen.getByRole('button', { name: /Próximo/i }));
 
-    // Verify Step 2 is rendered
     expect(await screen.findByText(/Qual seu perfil\?/i)).toBeInTheDocument();
 
-    // Select profile (default is employee, let's keep it)
-    // Go to Step 3
     fireEvent.click(screen.getByRole('button', { name: /Próximo/i }));
 
-    // Verify Step 3 is rendered (LGPD terms)
     expect(await screen.findByText(/Termos de Consentimento LGPD/i)).toBeInTheDocument();
 
-    // Try to submit without accepting terms
     fireEvent.click(screen.getByRole('button', { name: /Finalizar Cadastro/i }));
     expect(screen.getByText(/Você precisa aceitar os termos LGPD/i)).toBeInTheDocument();
 
-    // Accept terms and submit
     fireEvent.click(screen.getByLabelText(/Li e concordo com os termos de uso/i));
     fireEvent.click(screen.getByRole('button', { name: /Finalizar Cadastro/i }));
 
@@ -101,7 +92,7 @@ describe('Register Page', () => {
         first_name: 'Silas',
         last_name: 'Junior',
         role: 'funcionario',
-        departamento: '',
+        department: '',
       });
       expect(mockedUsedNavigate).toHaveBeenCalledWith('/login');
     });

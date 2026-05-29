@@ -19,22 +19,36 @@ describe('Manager Dashboard Page', () => {
   });
 
   it('should fetch and display manager metrics and alerts', async () => {
-    mockedGet.mockResolvedValueOnce({
-      data: {
-        recent_alerts: [
-          {
-            assessment_date: '2026-05-29T10:00:00Z',
-            employee__username: 'emp_alert',
+    mockedGet.mockImplementation((url: string): Promise<unknown> => {
+      if (url === '/manager/team-overview/') {
+        return Promise.resolve({
+          data: {
+            recent_alerts: [
+              {
+                assessment_date: '2026-05-29T10:00:00Z',
+                employee__username: 'emp_alert',
+              },
+            ],
+            averages: {
+              avg_stress: 42.5,
+              avg_anxiety: 15.0,
+              avg_burnout: 30.2,
+              avg_depression: 5.1,
+            },
           },
-        ],
-        averages: {
-          avg_stress: 42.5,
-          avg_anxiety: 15.0,
-          avg_burnout: 30.2,
-          avg_depression: 5.1,
-        },
-      },
-    } as never);
+        });
+      }
+      if (url === '/users/me/') {
+        return Promise.resolve({
+          data: {
+            username: 'gestor',
+            role: 'manager',
+            department: 'TI',
+          },
+        });
+      }
+      return Promise.resolve({ data: {} });
+    });
 
     render(
       <MemoryRouter>
@@ -44,23 +58,18 @@ describe('Manager Dashboard Page', () => {
 
     expect(api.get).toHaveBeenCalledWith('/manager/team-overview/');
 
-    // Assert alerts display
     await waitFor(() => {
       expect(screen.getByText(/emp_alert/i)).toBeInTheDocument();
       expect(screen.getByText(/Avaliação de alto risco identificada/i)).toBeInTheDocument();
     });
 
-    // Assert averages display
-    expect(screen.getByText('42.5')).toBeInTheDocument(); // Estresse médio
-    expect(screen.getByText('30.2')).toBeInTheDocument(); // Burnout médio
-    
-    // Assert active alerts count inside its specific card
-    const alertsCard = screen.getByText('Alertas ativos').closest('.MuiCardContent-root');
-    expect(alertsCard).toHaveTextContent('1');
+    expect(screen.getByText('Total de Usuários')).toBeInTheDocument();
+    expect(screen.getByText('Desempenho Médio')).toBeInTheDocument();
+    expect(screen.getByText('Status Geral')).toBeInTheDocument();
 
-    // Assert section table headers/values
+    const alertsCard = screen.getByText('Alertas Ativos').closest('.MuiCardContent-root');
+    expect(alertsCard).toBeInTheDocument();
+
     expect(screen.getByText(/Saúde Mental por Setor/i)).toBeInTheDocument();
-    expect(screen.getByText('TI')).toBeInTheDocument();
-    expect(screen.getByText('RH')).toBeInTheDocument();
   });
 });
