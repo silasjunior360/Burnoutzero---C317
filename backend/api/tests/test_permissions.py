@@ -48,7 +48,7 @@ class ApiPermissionsTestCase(APITestCase):
 
     def test_employee_scoping_assessments(self):
         Assessment.objects.create(employee=self.employee, risk_level='low', stress=1)
-        
+
         other_user = User.objects.create_user(username='other', password='password', role='employee')
         Assessment.objects.create(employee=other_user, risk_level='low', stress=2)
 
@@ -58,9 +58,13 @@ class ApiPermissionsTestCase(APITestCase):
         self.assertEqual(len(response.data), 1)
 
     def test_manager_scoping_department(self):
-        hr_employee = User.objects.create_user(username='hr_emp', password='password', role='employee', department='RH')
-        tech_employee = User.objects.create_user(username='tech_emp', password='password', role='employee', department='TI')
-        
+        hr_employee = User.objects.create_user(
+            username='hr_emp', password='password', role='employee', department='RH'
+        )
+        tech_employee = User.objects.create_user(
+            username='tech_emp', password='password', role='employee', department='TI'
+        )
+
         Assessment.objects.create(employee=hr_employee, risk_level='low')
         Assessment.objects.create(employee=tech_employee, risk_level='medium')
 
@@ -71,8 +75,10 @@ class ApiPermissionsTestCase(APITestCase):
 
     def test_insight_validation_permissions(self):
         assessment = Assessment.objects.create(employee=self.employee, risk_level='high')
-        insight = Insight.objects.create(employee=self.employee, assessment=assessment, text="T", recommendations="R")
-        
+        insight = Insight.objects.create(
+            employee=self.employee, assessment=assessment, text="T", recommendations="R"
+        )
+
         self.client.force_authenticate(user=self.employee)
         response = self.client.patch(reverse('validate_insight', args=[insight.id]), {'text': 'Novo'})
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
