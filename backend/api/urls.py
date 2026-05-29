@@ -7,7 +7,8 @@ from .views import (
     InsightViewSet, RegisterView, UserDetailView,
     AssessmentViewSet, FollowUpViewSet,
     AppointmentViewSet,
-    validate_insight, team_overview, my_points
+    validate_insight, team_overview, my_points,
+    UserPasswordChangeView
 )
 
 router = DefaultRouter()
@@ -44,6 +45,11 @@ urlpatterns = [
         'users/me/',
         UserDetailView.as_view(),
         name='user_me'
+    ),
+    path(
+        'users/me/password/',
+        UserPasswordChangeView.as_view(),
+        name='user_password_change'
     ),
     path('', include(router.urls)),
     path('insights/<int:pk>/validate/', validate_insight, name='validate_insight'),

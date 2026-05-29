@@ -116,7 +116,7 @@ export default function Register() {
           first_name: formData.nome.split(' ')[0],
           last_name: formData.nome.split(' ').slice(1).join(' '),
           role: formData.perfil,
-          departamento: formData.empresa
+          department: formData.empresa
         });
         
         alert('Cadastro realizado com sucesso! Faça login.');
@@ -140,13 +140,13 @@ export default function Register() {
           <Typography
             variant="h4"
             align="center"
-            sx={{
-              mb: 1,
-              fontWeight: 700,
-              background: 'linear-gradient(135deg, #147DAC 0%, #AE45AF 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}
+            sx={{ 
+                cursor: 'pointer',
+                background: 'linear-gradient(135deg, #147DAC 0%, #AE45AF 100%)',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontWeight: 700,
+              }}
           >
             Criar Conta
           </Typography>

@@ -1,5 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 import App from '../App';
 
 vi.mock('../services/api', () => ({
@@ -43,7 +44,11 @@ describe('Security Leak - Final Verification', () => {
   });
 
   it('should NOT render employee page and redirect to login when no token is present', async () => {
-    render(<App />);
+    render(
+      <MemoryRouter initialEntries={['/employee']}>
+        <App />
+      </MemoryRouter>
+    );
 
     await waitFor(() => {
       expect(screen.queryByText(/Olá, João!/i)).not.toBeInTheDocument();

@@ -38,9 +38,15 @@ class ApiViewsTestCase(APITestCase):
         self.assertEqual(response3.status_code, status.HTTP_200_OK)
 
     def test_team_overview(self):
+        User.objects.create_user(
+            username='psico_ti', password='password', role='psychologist', department='TI'
+        )
         self.client.force_authenticate(user=self.manager)
         response = self.client.get(reverse('team_overview'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('team_members', response.data)
+        self.assertIn('total_team_members', response.data)
+        self.assertEqual(response.data['total_team_members'], 2)
 
         self.client.force_authenticate(user=self.employee)
         response2 = self.client.get(reverse('team_overview'))
@@ -107,3 +113,54 @@ class ApiViewsTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['username'], self.employee.username)
         self.assertEqual(response.data['role'], self.employee.role)
+
+
+class ApiProfileSettingsTestCase(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username='perfil',
+            password='password123',
+            email='perfil@burnoutzero.com',
+            first_name='Ana',
+            last_name='Silva',
+            role='employee',
+            department='TI'
+        )
+
+    def test_update_profile_and_avatar(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            reverse('user_me'),
+            {
+                'first_name': 'Maria',
+                'last_name': 'Souza',
+                'email': 'maria@burnoutzero.com',
+                'avatar': 'data:image/png;base64,AAA'
+            },
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, 'Maria')
+        self.assertEqual(self.user.last_name, 'Souza')
+        self.assertEqual(self.user.email, 'maria@burnoutzero.com')
+        self.assertEqual(self.user.avatar, 'data:image/png;base64,AAA')
+
+    def test_change_password(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            reverse('user_password_change'),
+            {
+                'current_password': 'password123',
+                'new_password': 'novaSenha123',
+                'confirm_password': 'novaSenha123'
+            },
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('novaSenha123'))

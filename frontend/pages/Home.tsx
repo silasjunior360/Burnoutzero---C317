@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Box,
   Typography,
@@ -16,6 +17,7 @@ import {
   DialogContent,
   DialogActions
 } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import {
   EmojiEvents as EmojiEventsIcon,
   TrendingUp as TrendingUpIcon,
@@ -25,6 +27,25 @@ import {
 } from '@mui/icons-material';
  
 import { keyframes } from '@mui/system';
+import brasaPng from '../../Icons/brasa.png';
+import correntezaPng from '../../Icons/correnteza.png';
+import faiscaPng from '../../Icons/faisca.png';
+import fogueiraPng from '../../Icons/fogueira.png';
+import infernoPng from '../../Icons/inferno.png';
+import isqueiroPng from '../../Icons/isqueiro.png';
+import labaredaPng from '../../Icons/labareda.png';
+import gotaPng from '../../Icons/gota.png';
+
+import oceanoPng from '../../Icons/oceano.png';
+import pulmoesPng from '../../Icons/pulmoes.png';
+import relogioPng from '../../Icons/relogio-de-parede.png';
+import rioPng from '../../Icons/rio.png';
+import soproPng from '../../Icons/sopro-de-vento.png';
+import tornadoPng from '../../Icons/tornado.png';
+import trofeuPng from '../../Icons/trofeu.png';
+import tsunamiPng from '../../Icons/tsunami.png';
+import ventoPng from '../../Icons/vento.png';
+
 
 const breathIn = keyframes`
   0% { transform: scale(1); opacity: 0.6; }
@@ -58,33 +79,76 @@ const moodOptions = [
   { label: 'Muito bem', icon: '😁' }
 ];
 
-const AchievementIcon = ({ badge }: { badge?: string }) => {
-  const key = (badge || '').toLowerCase();
-  const map: Record<string, { symbol: string; bg: string }> = {
-    brasa: { symbol: '🔥', bg: '#FFF3E0' },
-    chama: { symbol: '', bg: '#FFEDE0' },
-    fogarel: { symbol: '', bg: '#FFF7E6' },
-    fogueira: { symbol: '', bg: '#FFF0E0' },
-    'incendiário': { symbol: '', bg: '#FFE8E0' },
-    fulgor: { symbol: '', bg: '#F3E8FF' },
-    gota: { symbol: '💧', bg: '#E3F2FD' },
-    balde: { symbol: '', bg: '#E8F6FF' },
-    onda: { symbol: '', bg: '#E0F7FA' },
-    'torneira de ouro': { symbol: '', bg: '#FFF8E1' },
-    cronômetro: { symbol: '⏱', bg: '#FFF3E0' },
-    brisa: { symbol: '🍃', bg: '#E8F5E9' },
-    lótus: { symbol: '', bg: '#F3E8FF' },
-    'pulmão duplo': { symbol: '', bg: '#FFF0F6' },
-    vela: { symbol: '', bg: '#FFF8E1' }
+const normalizeText = (value?: string) =>
+  (value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+const resolveHomeRouteFromUser = (userData: {
+  role?: string;
+  user_type?: string;
+  userType?: string;
+  tipo?: string;
+  tipo_usuario?: string;
+  profile_type?: string;
+}) => {
+  const rawType =
+    userData.role ||
+    userData.user_type ||
+    userData.userType ||
+    userData.tipo ||
+    userData.tipo_usuario ||
+    userData.profile_type ||
+    'employee';
+
+  const normalizedType = normalizeText(rawType);
+
+  if (normalizedType.includes('manager') || normalizedType.includes('gerente')) {
+    return '/manager';
+  }
+
+  if (normalizedType.includes('psychologist') || normalizedType.includes('psicologo') || normalizedType.includes('psicologa')) {
+    return '/psychologist';
+  }
+
+  return '/employee';
+};
+
+const AchievementIcon = ({ badge, title }: { badge?: string; title?: string }) => {
+  const key = normalizeText(title || badge);
+  const map: Record<string, { icon?: string; bg: string }> = {
+    'faisca': { icon: faiscaPng, bg: '#FFF1E6' },
+    'brasa semanal': { icon: isqueiroPng, bg: '#FFF3E0' },
+    'chama mensal': { icon: fogueiraPng, bg: '#FFEDE0' },
+    'labareda trimestral': { icon: brasaPng, bg: '#FFE8E0' },
+    'fogareu ardente': { icon: labaredaPng, bg: '#FFE8E0' },
+    'fulgor eterno': { icon: infernoPng, bg: '#F3E8FF' },
+
+    'gota iniciante': { icon: gotaPng, bg: '#E3F2FD' },
+    'correnteza pesada': { icon: correntezaPng, bg: '#E8F6FF' },
+    'rio profundo': { icon: rioPng, bg: '#E0F7FA' },
+    'oceano eterno': { icon: oceanoPng, bg: '#FFF8E1' },
+    'mare alta': { icon: tsunamiPng, bg: '#FFF4D6' },
+
+    'relogio de agua': { icon: relogioPng, bg: '#FFF3E0' },
+    'sopro': { icon: soproPng, bg: '#E8F5E9' },
+    'brisa cortante': { icon: ventoPng, bg: '#F3E8FF' },
+    'pulmao de aco': { icon: pulmoesPng, bg: '#FFF0F6' },
+    'tornado celeste': { icon: tornadoPng, bg: '#FFF8E1' }
   };
 
-  const found = map[key] ?? { symbol: ' ', bg: '#F5F5F5' };
+  const found = map[key] ?? { icon: trofeuPng, bg: '#F5F5F5' };
 
   return (
     <Box sx={{ width: 44, height: 44, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: found.bg, boxShadow: 1 }}>
-      <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-        {found.symbol}
-      </Typography>
+      <Box
+        component="img"
+        src={found.icon}
+        alt={badge || title || 'badge'}
+        sx={{ width: 26, height: 26, objectFit: 'contain' }}
+      />
     </Box>
   );
 };
@@ -427,7 +491,7 @@ const DailyWordsMission = ({ onCompleteXp }: { onCompleteXp: (xp: number) => voi
           </Box>
         </Box>
 
-        <Box sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 1, mb: 2 }}>
+        <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, mb: 2 }}>
           <Typography variant="body2" color="text.secondary">
             Palavra atual
           </Typography>
@@ -517,7 +581,7 @@ const MoodChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void })
         sx={{
           p: 2,
           borderRadius: 2,
-          bgcolor: 'grey.50',
+          bgcolor: 'background.paper',
           mt: 2,
           cursor: 'pointer',
           minHeight: 140,
@@ -651,7 +715,7 @@ const StreakChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void 
   };
 
   return (
-    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1, mt: 2 }}>
+    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, mt: 2 }}>
       <Typography variant="h5" sx={{ fontWeight: 700 }}>
         🔥 {streakDays}
       </Typography>
@@ -771,18 +835,23 @@ const WaterChallenge = ({ onGainXp }: { onGainXp: (xp: number) => void }) => {
 };
 
 export default function Jornada() {
-  const user = {
-    nome: 'João Silva',
-    titulo: 'Curador Sereno',
-    avatar: 'JS',
-    xp: 1250,
+
+  const theme = useTheme();
+
+  const [user, setUser] = useState({
+    nome: 'Usuário',
+    titulo: '',
+    avatar: '',
+    xp: 0,
     xpProximo: 1500,
-    pontos: 450,
-    diasAtivo: 15,
-    level: 5
-  };
+    pontos: 0,
+    diasAtivo: 0,
+    level: 1,
+    username: ''
+  });
 
   const [totalXp, setTotalXp] = useState(user.xp);
+  const [backRoute, setBackRoute] = useState('/employee');
   const [selectedConquestIndex, setSelectedConquestIndex] = useState<number | null>(null);
   const [openRewards, setOpenRewards] = useState(false);
   const [openObtainedConquests, setOpenObtainedConquests] = useState(false);
@@ -822,12 +891,88 @@ export default function Jornada() {
 
     setUserTiers({ consistency: consistencyTier, hydration: hydrationTier, breathing: breathingTier });
   }, [openRewards]);
+
+  // fetch profile and sync basic stats on mount
+  useEffect(() => {
+    let mounted = true;
+    import('../services/api').then(({ default: api }) => {
+
+      api.get('/users/me/').then((res) => {
+        if (!mounted) return;
+        const data = res.data || {};
+        setBackRoute(resolveHomeRouteFromUser(data));
+        const nome = (data.first_name || data.username || data.email || 'Usuário') + (data.last_name ? ' ' + data.last_name : '');
+        const username = data.username || '';
+        const profile: {
+          nome: string;
+          titulo: string;
+          avatar: string;
+          xp: number;
+          xpProximo: number;
+          pontos: number;
+          diasAtivo: number;
+          level: number;
+          username: string;
+        } = {
+          nome,
+          titulo: '',
+          avatar: (data.first_name ? data.first_name[0] : (data.username ? data.username[0] : 'U')) + (data.last_name ? data.last_name[0] : ''),
+          xp: 0,
+          xpProximo: 1500,
+          pontos: 0,
+          diasAtivo: 0,
+          level: 1,
+          username
+        };
+
+        // compute diasAtivo from local storage streak
+        const streakStoreLocal = readStorage<{ streakDays?: number }>('burnout-zero-streak', { streakDays: 0 });
+        profile.diasAtivo = streakStoreLocal.streakDays ?? 0;
+
+        // baseline xp estimate: streakDays * 10
+        profile.xp = (profile.diasAtivo || 0) * 10;
+        profile.pontos = profile.xp;
+
+        // if we have persisted pontos (XP total) use it as the canonical total
+        try {
+          const storedPontos = readStorage<number>('burnout-zero-pontos', profile.pontos || 0);
+          profile.pontos = storedPontos;
+          profile.xp = storedPontos;
+        } catch {
+          // ignore read storage errors
+        }
+
+        setUser(profile);
+        setTotalXp(profile.xp);
+      }).catch(() => {
+        // ignore - keep defaults
+
+      });
+
+    });
+
+    return () => { mounted = false; };
+  }, []);
+  const navigate = useNavigate();
   const [isDailyExpanded, setIsDailyExpanded] = useState(true);
   const [isWeeklyExpanded, setIsWeeklyExpanded] = useState(true);
   const [isConquestExpanded, setIsConquestExpanded] = useState(true);
 
   const handleGainXp = (xp: number) => {
     setTotalXp((prev) => prev + xp);
+    setUser((prev) => {
+      const next = {
+        ...prev,
+        xp: (prev.xp || 0) + xp,
+        pontos: (prev.pontos || 0) + xp
+      };
+      try {
+        writeStorage('burnout-zero-pontos', next.pontos);
+      } catch {
+        // ignore write storage errors
+      }
+      return next;
+    });
   };
 
   const conquistas = [
@@ -840,34 +985,34 @@ export default function Jornada() {
       key: 'consistency',
       category: 'Consistência (Streak)',
       achievements: [
-        { titulo: 'Faísca', requisito: 'Completar 1 desafio qualquer', xp: 50, badge: 'Brasa' },
-        { titulo: 'Brasa Semanal', requisito: '7 dias seguidos', xp: 200, badge: 'Chama' },
-        { titulo: 'Chama Mensal', requisito: '30 dias seguidos', xp: 1000, badge: 'Labareda' },
-        { titulo: 'Labareda Trimestral', requisito: '90 dias seguidos', xp: 5000, badge: 'Fogueira' },
-        { titulo: 'Fogaréu Ardente', requisito: '180 dias seguidos', xp: 20000, badge: 'Incendiário' },
-        { titulo: 'Fulgor Eterno', requisito: '365 dias seguidos', xp: 30000, badge: 'Fulgor' }
+        { titulo: 'Faísca', requisito: 'Completar 1 desafio qualquer', xp: 50, badge: 'faisca' },
+        { titulo: 'Brasa Semanal', requisito: '7 dias seguidos', xp: 200, badge: 'brasa' },
+        { titulo: 'Chama Mensal', requisito: '30 dias seguidos', xp: 1000, badge: 'chama' },
+        { titulo: 'Labareda Trimestral', requisito: '90 dias seguidos', xp: 5000, badge: 'labareda' },
+        { titulo: 'Fogaréu Ardente', requisito: '180 dias seguidos', xp: 20000, badge: 'fogareu' },
+        { titulo: 'Fulgor Eterno', requisito: '365 dias seguidos', xp: 30000, badge: 'fulgor' }
       ]
     },
     {
       key: 'hydration',
       category: 'Hidratação (Água)',
       achievements: [
-        { titulo: 'Gota iniciante', requisito: 'Beber 1L em um dia', xp: 50, badge: 'Gota' },
-        { titulo: 'Correnteza Pesada', requisito: 'Beber 2L em um dia (10x no total)', xp: 150, badge: 'Balde' },
-        { titulo: 'Rio Profundo', requisito: 'Beber 50L acumulados (25 dias de 2L)', xp: 500, badge: 'Onda' },
-        { titulo: 'Oceano Eterno', requisito: 'Completar a meta de água 30 dias', xp: 2000, badge: 'Torneira de ouro' },
-        { titulo: 'Maré Alta', requisito: 'Beber 100L acumulados', xp: 5000, badge: 'Tridente' },
-        { titulo: 'Relógio de Água', requisito: 'Fazer 10 goles no tempo certo (sem atrasar mais que 5 min)', xp: 300, badge: 'Cronômetro' }
+        { titulo: 'Gota iniciante', requisito: 'Beber 1L em um dia', xp: 50, badge: 'gota' },
+        { titulo: 'Correnteza Pesada', requisito: 'Beber 2L em um dia (10x no total)', xp: 150, badge: 'correnteza' },
+        { titulo: 'Rio Profundo', requisito: 'Beber 50L acumulados (25 dias de 2L)', xp: 500, badge: 'rio' },
+        { titulo: 'Oceano Eterno', requisito: 'Completar a meta de água 30 dias', xp: 2000, badge: 'oceano' },
+        { titulo: 'Maré Alta', requisito: 'Beber 100L acumulados', xp: 5000, badge: 'mare' },
+        { titulo: 'Relógio de Água', requisito: 'Fazer 10 goles no tempo certo (sem atrasar mais que 5 min)', xp: 300, badge: 'cronômetro' }
       ]
     },
     {
       key: 'breathing',
       category: 'Respiração e Calma',
       achievements: [
-        { titulo: 'Sopro', requisito: 'Fazer 1 ciclo de respiração', xp: 30, badge: 'Brisa' },
-        { titulo: 'Brisa Cortante', requisito: 'Fazer 100 ciclos de respiração', xp: 400, badge: 'Lótus' },
-        { titulo: 'Pulmão de aço', requisito: 'Fazer 500 ciclos', xp: 1500, badge: 'Pulmão duplo' },
-        { titulo: 'Tornado Celeste', requisito: 'Fazer 1000 ciclos', xp: 100, badge: 'Vela' }
+        { titulo: 'Sopro', requisito: 'Fazer 1 ciclo de respiração', xp: 30, badge: 'sopro' },
+        { titulo: 'Brisa Cortante', requisito: 'Fazer 100 ciclos de respiração', xp: 400, badge: 'brisa' },
+        { titulo: 'Pulmão de aço', requisito: 'Fazer 500 ciclos', xp: 1500, badge: 'pulmão aço' },
+        { titulo: 'Tornado Celeste', requisito: 'Fazer 1000 ciclos', xp: 100, badge: 'tornado' }
       ]
     }
   ];
@@ -942,7 +1087,7 @@ export default function Jornada() {
         sx={{
           p: 2,
           borderRadius: 2,
-          bgcolor: 'grey.50',
+          bgcolor: 'background.paper',
           height: '100%',
           display: 'flex',
           flexDirection: 'column'
@@ -983,6 +1128,9 @@ export default function Jornada() {
           Olá, {user.nome}! Vamos começar sua jornada de hoje?
         </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
+          <Button variant="outlined" onClick={() => navigate(backRoute)} sx={{ borderRadius: 2 }}>
+            Voltar
+          </Button>
           <Button
             variant="outlined"
             startIcon={<EmojiEventsIcon />}
@@ -998,7 +1146,7 @@ export default function Jornada() {
         {/* Coluna principal (esquerda) */}
         <Grid size={{ xs: 12, md: 8 }}>
           {/* Desafios Diários: Respiração + Água */}
-            <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', bgcolor: 'grey.100' }}>
+            <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
               <Box sx={{ bgcolor: 'primary.main', px: 3, py: 2, color: 'white' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -1025,7 +1173,7 @@ export default function Jornada() {
             </Card>
 
           {/* Desafios Semanais */}
-          <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', bgcolor: 'grey.100' }}>
+          <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ bgcolor: 'primary.main', px: 3, py: 2, color: 'white' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -1057,7 +1205,7 @@ export default function Jornada() {
           </Card>
 
           {/* Seu equilíbrio semanal */}
-          <Card sx={{ borderRadius: 2, bgcolor: 'success.light', color: 'white' }}>
+          <Card sx={{ borderRadius: 2, bgcolor: theme.palette.mode === 'dark' ? 'rgba(20, 125, 172, 0.18)' : 'success.light', color: theme.palette.mode === 'dark' ? 'text.primary' : 'white', border: '1px solid', borderColor: 'divider' }}>
             <CardContent sx={{ p: 3 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                 <TrendingUpIcon sx={{ fontSize: 40 }} />
@@ -1069,7 +1217,7 @@ export default function Jornada() {
                 </Box>
                 <Button
                   variant="contained"
-                  sx={{ bgcolor: 'white', color: 'success.main' }}
+                  sx={{ bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white', color: 'success.main' }}
                 >
                   ELOGIOS FEITOS
                 </Button>
@@ -1084,7 +1232,7 @@ export default function Jornada() {
         {/* Coluna lateral (direita) */}
         <Grid size={{ xs: 12, md: 4 }}>
           {/* Perfil do usuário */}
-          <Card sx={{ mb: 3, borderRadius: 2, textAlign: 'center' }}>
+          <Card sx={{ mb: 3, borderRadius: 2, textAlign: 'center', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
             <CardContent sx={{ p: 3 }}>
               <Avatar
                 sx={{
@@ -1145,7 +1293,7 @@ export default function Jornada() {
           </Card>
 
           {/* Conquistas Recentes */}
-          <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', bgcolor: 'grey.100' }}>
+          <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ bgcolor: 'primary.main', px: 3, py: 2, color: 'white' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
@@ -1171,7 +1319,7 @@ export default function Jornada() {
                         p: 2,
                         minHeight: 104,
                         borderRadius: 2,
-                        bgcolor: 'grey.50',
+                        bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.03)' : 'grey.50',
                         cursor: 'pointer',
                         display: 'flex',
                         alignItems: 'center',
@@ -1197,7 +1345,7 @@ export default function Jornada() {
                               alignItems: 'center',
                               justifyContent: 'center'
                             }}>
-                              <AchievementIcon badge={found?.badge} />
+                              <AchievementIcon badge={found?.badge} title={conquista.titulo} />
                             </Box>
                             <Typography variant="caption" color="text.secondary">
                               Clique para ver
@@ -1256,7 +1404,7 @@ export default function Jornada() {
                               sx={{ p: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
                             >
                               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                <AchievementIcon badge={ach.badge} />
+                                <AchievementIcon badge={ach.badge} title={ach.titulo} />
                                 <Box>
                                   <Typography variant="subtitle2">{ach.titulo}</Typography>
                                   <Typography variant="caption" color="text.secondary">{ach.requisito}</Typography>
@@ -1300,7 +1448,7 @@ export default function Jornada() {
                     sx={{ p: 1.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}
                   >
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                      <AchievementIcon badge={achievement.badge} />
+                      <AchievementIcon badge={achievement.badge} title={achievement.titulo} />
                       <Box>
                         <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                           {achievement.titulo}
