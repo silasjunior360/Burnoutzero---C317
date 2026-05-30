@@ -24,6 +24,15 @@ class UserCreateSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {'password': {'write_only': True}}
 
+        ROLE_ALIASES = {
+            'funcionario': 'employee',
+            'psicologo': 'psychologist',
+            'gestor': 'manager',
+        }
+
+        def validate_role(self, value):
+            return self.ROLE_ALIASES.get(value, value)
+
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         return user

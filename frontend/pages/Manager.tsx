@@ -58,6 +58,21 @@ interface SetorMetric {
   }>;
 }
 
+const normalizeSetores = (data: unknown): SetorMetric[] => {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (data && typeof data === 'object') {
+    const maybeResults = (data as { results?: unknown }).results;
+    if (Array.isArray(maybeResults)) {
+      return maybeResults as SetorMetric[];
+    }
+  }
+
+  return [];
+};
+
 export default function Manager() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [expandedSetores, setExpandedSetores] = useState<Record<number, boolean>>({});
@@ -76,14 +91,14 @@ export default function Manager() {
     ])
       .then(([dashboardRes, sectorsRes]) => {
         setDashboardData(dashboardRes.data);
-        setMetricasSetores(sectorsRes.data || []);
+        setMetricasSetores(normalizeSetores(sectorsRes.data));
       })
       .catch((err) => console.error(err));
   }, []);
 
   const refreshSectors = async () => {
     const response = await api.get('/manager/sectors/');
-    setMetricasSetores(response.data || []);
+    setMetricasSetores(normalizeSetores(response.data));
   };
 
   const alerts = dashboardData?.recent_alerts || [];
@@ -269,6 +284,16 @@ export default function Manager() {
               <WarningIcon sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
               <Typography variant="h4">{activeAlertsDisplayCount}</Typography>
               <Typography color="text.secondary">Alertas Ativos</Typography>
+              {alerts.length > 0 && (
+                <Box sx={{ mt: 1.5, textAlign: 'left' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    {alerts[0].employee__username}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Avaliação de alto risco identificada
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
             <Collapse in={activeAlertsExpanded} timeout="auto" unmountOnExit>
               <Box sx={{ px: 2, pb: 2, textAlign: 'left' }}>
