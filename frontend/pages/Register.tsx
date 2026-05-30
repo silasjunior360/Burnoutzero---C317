@@ -45,7 +45,7 @@ export default function Register() {
     usuario: '',
     senha: '',
     confirmarSenha: '',
-    perfil: 'funcionario',
+    perfil: 'employee',
     crp: '',
     empresa: ''
   });
@@ -109,7 +109,7 @@ export default function Register() {
       }
       
       try {
-        await api.post('/auth/register/', {
+        await api.post('auth/register/', {
           username: formData.usuario,
           email: formData.email,
           password: formData.senha,
