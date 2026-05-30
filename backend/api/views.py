@@ -244,7 +244,10 @@ class SectorViewSet(viewsets.ModelViewSet):
         except User.DoesNotExist:
             return Response({'error': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
-        for other_sector in Sector.objects.filter(department=request.user.department, members=member).exclude(pk=sector.pk):
+        for other_sector in Sector.objects.filter(
+            department=request.user.department,
+            members=member,
+        ).exclude(pk=sector.pk):
             other_sector.members.remove(member)
 
         sector.members.add(member)
