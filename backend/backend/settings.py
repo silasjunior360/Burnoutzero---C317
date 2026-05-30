@@ -8,7 +8,7 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'your-default-secret-key')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -25,7 +25,10 @@ INSTALLED_APPS = [
     'corsheaders',
     'core',
     'api.apps.ApiConfig',
+    'ai_engine',
 ]
+
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

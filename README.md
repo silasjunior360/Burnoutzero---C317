@@ -6,14 +6,17 @@
 
 <p align="center">
   <!-- Frontend -->
-  <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
-  <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
-  <img src="https://img.shields.io/badge/Vite-8.0-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
-  <img src="https://img.shields.io/badge/MUI-7-007FFF?style=for-the-badge&logo=mui&logoColor=white" alt="MUI" />
+  <img src="https://img.shields.io/badge/React-19.2.4-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React" />
+  <img src="https://img.shields.io/badge/TypeScript-5.9.3-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Vite-8.0.0-646CFF?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/MUI-7.3.10-007FFF?style=for-the-badge&logo=mui&logoColor=white" alt="MUI" />
   <!-- Backend -->
-  <img src="https://img.shields.io/badge/Django-6.0-092E20?style=for-the-badge&logo=django&logoColor=white" alt="Django" />
-  <img src="https://img.shields.io/badge/DRF-3.17-FF1709?style=for-the-badge&logo=django&logoColor=white" alt="Django REST Framework" />
+  <img src="https://img.shields.io/badge/Django-6.0.4-092E20?style=for-the-badge&logo=django&logoColor=white" alt="Django" />
+  <img src="https://img.shields.io/badge/DRF-3.17.1-FF1709?style=for-the-badge&logo=django&logoColor=white" alt="Django REST Framework" />
   <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL" />
+  <!-- AI -->
+  <img src="https://img.shields.io/badge/Groq-LLM-orange?style=for-the-badge" alt="Groq LLM" />
+  <img src="https://img.shields.io/badge/RAG-Enabled-blueviolet?style=for-the-badge" alt="RAG" />
   <!-- Infra -->
   <img src="https://img.shields.io/badge/Docker-Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker" />
   <img src="https://img.shields.io/badge/GitHub_Actions-CI%2FCD-2088FF?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Actions" />
@@ -26,6 +29,7 @@
 ## 📋 Table of Contents
 
 - [About](#-about)
+- [LLM & RAG Architecture](#-llm--rag-architecture)
 - [Tech Stack](#-tech-stack)
 - [Project Structure](#-project-structure)
 - [Prerequisites](#-prerequisites)
@@ -47,6 +51,15 @@ Key capabilities:
 - 🔔 Burnout risk alerts for managers
 - 🔐 Role-based access (Manager / Employee)
 - 📈 Historical trend charts powered by Recharts
+- 🤖 RAG-based AI Insights & LLM Chat assistance powered by Groq
+
+---
+
+## 🗺️ LLM & RAG Architecture
+
+Below is the architectural diagram of the LLM and RAG integration in BurnoutZero:
+
+![BurnoutZero LLM Architecture](./docs/burnoutzero_llm_architecture.svg)
 
 ---
 
@@ -55,23 +68,24 @@ Key capabilities:
 ### Frontend
 | Technology | Version | Purpose |
 |---|---|---|
-| React | 19 | UI framework |
-| TypeScript | 5.9 | Static typing |
-| Vite | 8 | Build tool & dev server |
-| Material UI (MUI) | 7 | Component library |
-| React Router | 7 | Client-side routing |
-| Recharts | 3 | Data visualization |
-| Axios | 1.x | HTTP client |
-| Vitest | 4 | Unit testing |
+| React | 19.2.4 | UI framework |
+| TypeScript | 5.9.3 | Static typing |
+| Vite | 8.0.0 | Build tool & dev server |
+| Material UI (MUI) | 7.3.10 | Component library |
+| React Router | 7.14.0 | Client-side routing |
+| Recharts | 3.8.1 | Data visualization |
+| Axios | 1.15.2 | HTTP client |
+| Vitest | 4.0.7 | Unit testing |
 
 ### Backend
 | Technology | Version | Purpose |
 |---|---|---|
-| Django | 6.0 | Web framework |
-| Django REST Framework | 3.17 | REST API |
-| SimpleJWT | 5.3+ | JWT authentication |
-| django-cors-headers | 4+ | CORS handling |
+| Django | 6.0.4 | Web framework |
+| Django REST Framework | 3.17.1 | REST API |
+| SimpleJWT | 5.3.0 | JWT authentication |
+| django-cors-headers | 4.0.0 | CORS handling |
 | psycopg | 3.2 | PostgreSQL adapter |
+| Groq | 0.5.0+ | LLM inference API client |
 
 ### Infrastructure
 | Technology | Purpose |
@@ -91,6 +105,7 @@ Burnoutzero---C317/
 │       ├── backend-ci.yml     # Django tests & linting
 │       └── frontend-ci.yml    # React tests & build
 ├── backend/
+│   ├── ai_engine/             # LLM & RAG engine (Groq, prompt services, chat/insight, knowledge base)
 │   ├── api/                   # REST API endpoints
 │   ├── core/                  # Django project settings
 │   ├── Dockerfile
@@ -102,6 +117,8 @@ Burnoutzero---C317/
 │   └── App.tsx
 ├── docker-compose.yml
 ├── .env.example
+├── docs/
+│   └── b urnoutzero_llm_architecture.svg
 └── package.json
 ```
 

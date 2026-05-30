@@ -22,12 +22,10 @@ class Assessment(models.Model):
         User, on_delete=models.CASCADE, related_name='assessments'
     )
     assessment_date = models.DateTimeField(auto_now_add=True)
-
     stress = models.IntegerField(default=0)
     anxiety = models.IntegerField(default=0)
     burnout = models.IntegerField(default=0)
     depression = models.IntegerField(default=0)
-
     RISK_CHOICES = (
         ('low', 'Low'),
         ('medium', 'Medium'),
@@ -56,12 +54,10 @@ class Sector(models.Model):
 
 class FollowUp(models.Model):
     psychologist = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='given_follow_ups'
+        User, on_delete=models.CASCADE, related_name='given_follow_ups'
     )
     employee = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='received_follow_ups'
+        User, on_delete=models.CASCADE, related_name='received_follow_ups'
     )
     date = models.DateTimeField(auto_now_add=True)
     private_notes = models.TextField()
@@ -70,8 +66,7 @@ class FollowUp(models.Model):
 
 class Appointment(models.Model):
     employee = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        related_name='appointments'
+        User, on_delete=models.CASCADE, related_name='appointments'
     )
     psychologist_name = models.CharField(max_length=100)
     date_time = models.CharField(max_length=50)
