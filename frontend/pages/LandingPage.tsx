@@ -1,443 +1,280 @@
-import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { theme } from '../theme';
+import {
+  Box,
+  Button,
+  Card,
+  CardContent,
+  Chip,
+  Container,
+  Grid,
+  Stack,
+  Typography,
+} from '@mui/material';
+import { alpha } from '@mui/material/styles';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import HealingIcon from '@mui/icons-material/Healing';
+import DashboardIcon from '@mui/icons-material/Dashboard';
 
-const BurnoutZeroLanding = () => {
-  useEffect(() => {
-    const handleScroll = () => {
-      // Scroll detection logic
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+const audienceCards = [
+  {
+    title: 'Para Funcionários',
+    description:
+      'Desafios diários gamificados que incentivam o autoconhecimento, a meditação guiada e o uso de canais de apoio, transformando o equilíbrio emocional em um hábito recompensador.',
+    icon: <AccessTimeIcon />,
+  },
+  {
+    title: 'Para Psicólogos',
+    description:
+      'Gestão clínica eficiente com prontuários digitais, agendamento simplificado e insights baseados em dados para tratamentos mais assertivos.',
+    icon: <HealingIcon />,
+  },
+  {
+    title: 'Para Gestores',
+    description:
+      'Dashboards em tempo real com indicadores de clima e saúde organizacional, permitindo intervenções preventivas estratégicas.',
+    icon: <DashboardIcon />,
+  },
+];
 
+export default function BurnoutZeroLanding() {
   return (
-    <div className="burnout-zero-page">
-      {/* Estilos Globais da Página */}
-      <style>{`
-        :root {
-          --color-primary: ${theme.palette.primary.main};
-          --color-primary-dark: ${theme.palette.primary.dark};
-          --color-secondary: ${theme.palette.secondary.main};
-          --bg-default: #ffffff; /* Forçar fundo branco na landing */
-          --bg-paper: ${theme.palette.background.paper};
-          --text-primary: ${theme.palette.text.primary};
-          --text-secondary: ${theme.palette.text.secondary};
-          --divider: ${theme.palette.divider || '#a6c8f5'};
-          --accent-warning: ${theme.palette.warning?.main || '#FFB347'};
-          --accent-error: ${theme.palette.error?.main || '#FF6B6B'};
-        }
+    <Box
+      sx={{
+        minHeight: '100vh',
+        background:
+          'radial-gradient(circle at top left, rgba(20,125,172,0.12), transparent 28%), radial-gradient(circle at top right, rgba(174,69,175,0.12), transparent 24%), linear-gradient(180deg, #f7fbff 0%, #ffffff 42%, #f6f9fc 100%)',
+        color: 'text.primary',
+      }}
+    >
+      <Container maxWidth="lg" sx={{ py: { xs: 8, md: 12 } }}>
+        <Stack spacing={8}>
+          <Box
+            sx={{
+              position: 'relative',
+              overflow: 'hidden',
+              borderRadius: 6,
+              px: { xs: 3, md: 6 },
+              py: { xs: 5, md: 8 },
+              background:
+                'linear-gradient(135deg, rgba(255,255,255,0.92) 0%, rgba(245,250,255,0.96) 100%)',
+              border: '1px solid',
+              borderColor: alpha('#147DAC', 0.12),
+              boxShadow: '0 24px 60px rgba(18, 38, 63, 0.10)',
+            }}
+          >
+            <Box
+              sx={{
+                position: 'absolute',
+                inset: 0,
+                background:
+                  'radial-gradient(circle at 80% 0%, rgba(20,125,172,0.10), transparent 22%), radial-gradient(circle at 20% 100%, rgba(174,69,175,0.10), transparent 20%)',
+                pointerEvents: 'none',
+              }}
+            />
 
-        * {
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-        }
-        
-        .burnout-zero-page {
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-          background: linear-gradient(135deg, var(--bg-default) 0%, var(--bg-paper) 100%);
-          color: var(--text-primary);
-          line-height: 1.5;
-          scroll-behavior: smooth;
-        }
+              <Box sx={{ position: 'relative', display: 'flex', justifyContent: 'center', mb: 2 }}>
+                <Box component="img" src="/favicon.svg" alt="Home" sx={{ width: 60, height: 60, mb: 0 }} />
+              </Box>
 
-        /* Container principal */
-        .container {
-          max-width: 1280px;
-          margin: 0 auto;
-          padding: 0 32px;
-        }
+            <Grid container spacing={4} alignItems="center" sx={{ position: 'relative' }}>
+              <Grid size={{ xs: 12 }}>
+                <Stack spacing={3} alignItems="center">
+                  <Box sx={{ textAlign: 'center' }}>
+                    <Typography
+                      variant="h2"
+                      sx={{
+                        fontWeight: 800,
+                        letterSpacing: '-0.03em',
+                        lineHeight: 1.05,
+                        fontSize: { xs: '2rem', sm: '2.4rem', md: '2.8rem', lg: '3.15rem' },
+                        maxWidth: 'none',
+                        whiteSpace: { xs: 'normal', md: 'nowrap' },
+                        backgroundImage: 'linear-gradient(90deg, #147DAC 0%, #AE45AF 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                      }}
+                    >
+                      Transforme a saúde mental da sua empresa
+                    </Typography>
+                    <Typography
+                      variant="h6"
+                      sx={{
+                        mt: 2,
+                        maxWidth: 700,
+                        color: 'text.secondary',
+                        fontWeight: 400,
+                        lineHeight: 1.75,
+                        mx: 'auto',
+                      }}
+                    >
+                      Uma plataforma completa para prevenir o burnout e cultivar o bem-estar corporativo com
+                      inteligência e empatia.
+                    </Typography>
+                  </Box>
 
-        /* Botões */
-        .btn-primary {
-          display: inline-block;
-          background-color: var(--color-primary);
-          color: white;
-          font-weight: 600;
-          padding: 12px 28px;
-          border-radius: 40px;
-          text-decoration: none;
-          transition: all 0.3s ease;
-          border: none;
-          cursor: pointer;
-          font-size: 1rem;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-        }
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} justifyContent="center">
+                    <Button
+                      component={Link}
+                      to="/login"
+                      variant="contained"
+                      size="large"
+                      sx={{ px: 3.5, py: 1.35, borderRadius: 999, fontWeight: 700 }}
+                    >
+                      Login
+                    </Button>
+                    <Button
+                      component={Link}
+                      to="/register"
+                      variant="outlined"
+                      size="large"
+                      sx={{ px: 3.5, py: 1.35, borderRadius: 999, fontWeight: 700 }}
+                    >
+                      Cadastrar
+                    </Button>
+                  </Stack>
+                </Stack>
+              </Grid>
+            </Grid>
+          </Box>
 
-        .btn-primary:hover {
-          background-color: var(--color-primary-dark);
-          transform: translateY(-2px);
-          box-shadow: 0 10px 20px -5px rgba(15,59,60,0.3);
-        }
+          <Box>
+            <Stack spacing={1.25} sx={{ mb: 3 }}>
+              <Chip
+                label="O QUE OFERECEMOS"
+                sx={{
+                  width: 'fit-content',
+                  bgcolor: alpha('#AE45AF', 0.10),
+                  color: 'secondary.main',
+                  fontWeight: 700,
+                }}
+              />
+              <Typography variant="h3" sx={{ fontWeight: 800, letterSpacing: '-0.02em' }}>
+                Soluções para todo o ecossistema
+              </Typography>
+            </Stack>
 
-        .btn-outline {
-          display: inline-block;
-          background-color: transparent;
-          color: var(--color-primary);
-          font-weight: 600;
-          padding: 12px 28px;
-          border-radius: 40px;
-          text-decoration: none;
-          border: 2px solid var(--color-primary);
-          transition: all 0.3s ease;
-          cursor: pointer;
-          font-size: 1rem;
-        }
+            <Grid container spacing={3}>
+              {audienceCards.map((card) => (
+                <Grid size={{ xs: 12, md: 4 }} key={card.title}>
+                  <Card
+                    variant="outlined"
+                    sx={{
+                      height: '100%',
+                      borderRadius: 4,
+                      borderColor: alpha('#147DAC', 0.12),
+                      boxShadow: '0 12px 30px rgba(18, 38, 63, 0.05)',
+                    }}
+                  >
+                    <CardContent sx={{ p: 3.25 }}>
+                      <Stack spacing={2}>
+                        <Box
+                          sx={{
+                            width: 48,
+                            height: 48,
+                            borderRadius: 3,
+                            display: 'grid',
+                            placeItems: 'center',
+                            color: 'primary.main',
+                            backgroundColor: 'rgba(20, 125, 172, 0.08)',
+                          }}
+                        >
+                          {card.icon}
+                        </Box>
+                        <Typography variant="h5" sx={{ fontWeight: 800 }}>
+                          {card.title}
+                        </Typography>
+                        <Typography variant="body1" color="text.secondary" sx={{ lineHeight: 1.75 }}>
+                          {card.description}
+                        </Typography>
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          </Box>
 
-        .btn-outline:hover {
-          background-color: var(--color-primary);
-          color: white;
-          transform: translateY(-2px);
-        }
+          <Card
+            sx={{
+              borderRadius: 6,
+              color: '#fff',
+              background: 'linear-gradient(135deg, #147DAC 0%, #0F4C68 52%, #AE45AF 100%)',
+              boxShadow: '0 28px 60px rgba(15, 59, 60, 0.22)',
+            }}
+          >
+            <CardContent sx={{ p: { xs: 4, md: 6 } }}>
+              <Grid container spacing={3} alignItems="center">
+                <Grid size={{ xs: 12, md: 7 }}>
+                  <Stack spacing={1.5}>
+                    <Typography variant="h4" sx={{ fontWeight: 800, letterSpacing: '-0.02em' }}>
+                      Pronto para reduzir o estresse na sua equipe?
+                    </Typography>
+                    <Typography variant="body1" sx={{ maxWidth: 620, opacity: 0.92, lineHeight: 1.8 }}>
+                      Junte-se a centenas de empresas que já estão redefinindo a cultura de trabalho como Burnout
+                      Zero.
+                    </Typography>
+                  </Stack>
+                </Grid>
+                <Grid size={{ xs: 12, md: 5 }}>
+                  <Stack
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1.5}
+                    justifyContent={{ md: 'flex-end' }}
+                  >
+                    <Button
+                      component={Link}
+                      to="/login"
+                      variant="contained"
+                      size="large"
+                      sx={{
+                        bgcolor: '#fff',
+                        color: 'primary.main',
+                        px: 3.5,
+                        py: 1.3,
+                        borderRadius: 999,
+                        fontWeight: 800,
+                        '&:hover': { bgcolor: 'rgba(255,255,255,0.92)' },
+                      }}
+                    >
+                      Login
+                    </Button>
+                    <Button
+                      component={Link}
+                      to="/register"
+                      variant="outlined"
+                      size="large"
+                      sx={{
+                        borderColor: 'rgba(255,255,255,0.7)',
+                        color: '#fff',
+                        px: 3.5,
+                        py: 1.3,
+                        borderRadius: 999,
+                        fontWeight: 800,
+                        '&:hover': { borderColor: '#fff', backgroundColor: 'rgba(255,255,255,0.08)' },
+                      }}
+                    >
+                      Cadastro
+                    </Button>
+                  </Stack>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        </Stack>
+      </Container>
 
-        .btn-large {
-          padding: 14px 36px;
-          font-size: 1.1rem;
-        }
-
-        /* Hero Section */
-        .hero {
-          text-align: center;
-          padding: 100px 0 80px;
-        }
-
-        .hero h1 {
-          font-size: 3.5rem;
-          font-weight: 800;
-          background: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
-          background-clip: text;
-          -webkit-background-clip: text;
-          color: transparent;
-          margin-bottom: 20px;
-          letter-spacing: -0.02em;
-          line-height: 1.2;
-        }
-
-        .hero p {
-          font-size: 1.25rem;
-          color: var(--text-secondary);
-          max-width: 700px;
-          margin: 0 auto 40px;
-          line-height: 1.6;
-        }
-
-        .button-group {
-          display: flex;
-          gap: 20px;
-          justify-content: center;
-          flex-wrap: wrap;
-        }
-
-        /* Soluções */
-        .solutions {
-          padding: 80px 0;
-          background-color: rgba(255,255,255,0.6);
-          border-radius: 64px 64px 0 0;
-        }
-
-        .section-label {
-          text-align: center;
-          font-size: 0.9rem;
-          letter-spacing: 2px;
-          text-transform: uppercase;
-          color: var(--color-secondary);
-          font-weight: 600;
-          margin-bottom: 16px;
-        }
-
-        .section-title {
-          text-align: center;
-          font-size: 2.5rem;
-          font-weight: 700;
-          margin-bottom: 56px;
-          color: var(--text-primary);
-        }
-
-        .cards-grid {
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-          gap: 32px;
-        }
-
-        .card {
-          background: var(--bg-paper);
-          border-radius: 32px;
-          padding: 32px 28px;
-          box-shadow: 0 20px 35px -12px rgba(0,0,0,0.08);
-          transition: all 0.3s ease;
-          border: 1px solid var(--divider);
-        }
-
-        .card:hover {
-          transform: translateY(-8px);
-          box-shadow: 0 30px 40px -15px rgba(15,59,60,0.2);
-          border-color: #cbd5e1;
-        }
-
-        .card-icon {
-          font-size: 3rem;
-          margin-bottom: 24px;
-        }
-
-        .card h3 {
-          font-size: 1.75rem;
-          font-weight: 700;
-          margin-bottom: 16px;
-          color: var(--color-primary);
-        }
-
-        .card p {
-          color: var(--text-secondary);
-          line-height: 1.6;
-        }
-
-        /* Seção CTA */
-        .cta-section {
-          background: linear-gradient(120deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
-          border-radius: 48px;
-          margin: 60px 0 80px;
-          padding: 64px 48px;
-          text-align: center;
-          color: white;
-          box-shadow: 0 25px 35px -12px rgba(0,0,0,0.2);
-        }
-
-        .cta-section h2 {
-          font-size: 2.2rem;
-          font-weight: 700;
-          margin-bottom: 16px;
-        }
-
-        .cta-section p {
-          font-size: 1.2rem;
-          max-width: 600px;
-          margin: 0 auto 32px;
-          opacity: 0.9;
-        }
-
-        .cta-section .btn-primary {
-          background-color: var(--bg-paper);
-          color: var(--color-primary);
-          box-shadow: 0 8px 18px rgba(0,0,0,0.1);
-        }
-
-        .cta-section .btn-primary:hover {
-          background-color: #f1f5f9;
-          transform: scale(1.02);
-        }
-
-        .cta-buttons {
-          display: flex;
-          gap: 20px;
-          justify-content: center;
-          margin-top: 20px;
-        }
-
-        /* Footer */
-        .footer {
-          border-top: 1px solid var(--divider);
-          padding: 48px 0 40px;
-          margin-top: 20px;
-          background-color: var(--bg-default);
-        }
-
-        .footer-content {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: space-between;
-          align-items: flex-start;
-          gap: 32px;
-        }
-
-        .footer-brand h3 {
-          font-size: 1.8rem;
-          font-weight: 800;
-          color: var(--color-primary);
-          margin-bottom: 8px;
-        }
-
-        .footer-brand p {
-          color: var(--text-secondary);
-          max-width: 280px;
-          font-size: 0.9rem;
-        }
-
-        .footer-links {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 32px;
-        }
-
-        .footer-links a {
-          text-decoration: none;
-          color: var(--text-secondary);
-          font-weight: 500;
-          transition: color 0.2s;
-          font-size: 0.95rem;
-        }
-
-        .footer-links a:hover {
-          color: var(--color-primary);
-        }
-
-        .copyright {
-          text-align: center;
-          padding-top: 40px;
-          margin-top: 40px;
-          border-top: 1px solid var(--divider);
-          font-size: 0.85rem;
-          color: var(--text-secondary);
-        }
-        
-        .btn-outline2 {
-          display: inline-block;
-          background-color: transparent;
-          color: #ffffff;
-          font-weight: 600;
-          padding: 12px 28px;
-          border-radius: 40px;
-          text-decoration: none;
-          border: 2px solid #ffffff;
-          transition: all 0.3s ease;
-          cursor: pointer;
-          font-size: 1rem;
-        }
-          
-        .btn-outline2:hover {
-          background-color: #ffffff;
-          color: #3468a3;
-          transform: translateY(-2px);
-        }
-
-        /* Responsividade */
-        @media (max-width: 768px) {
-          .container {
-            padding: 0 24px;
-          }
-          .hero h1 {
-            font-size: 2.4rem;
-          }
-          .hero p {
-            font-size: 1rem;
-          }
-          .section-title {
-            font-size: 2rem;
-          }
-          .cta-section h2 {
-            font-size: 1.8rem;
-          }
-          .cta-section {
-            padding: 40px 24px;
-          }
-          .footer-content {
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-          }
-          .footer-brand p {
-            margin: 0 auto;
-          }
-          .button-group {
-            gap: 12px;
-          }
-          .cards-grid {
-            gap: 24px;
-          }
-        }
-
-        @media (max-width: 480px) {
-          .hero {
-            padding: 60px 0 40px;
-          }
-          .btn-primary, .btn-outline {
-            padding: 10px 20px;
-            font-size: 0.9rem;
-          }
-          .section-title {
-            font-size: 1.8rem;
-          }
-        }
-      `}</style>
-
-      {/* Conteúdo da Landing Page */}
-      <div className="container">
-        {/* Hero Section */}
-        <section className="hero">
-          <h1>Transforme a saúde mental da sua empresa</h1>
-          <p>
-            Uma plataforma completa para prevenir o burnout e cultivar o bem-estar corporativo com inteligência e empatia.
-          </p>
-          <div className="button-group">
-            <Link to="/login" className="btn-primary">Login</Link>
-            <Link to="/register" className="btn-outline">Cadastrar</Link>
-            
-          </div>
-        </section>
-
-        {/* Soluções */}
-        <section className="solutions">
-          <div className="section-label">O QUE OFERECEMOS</div>
-          <h2 className="section-title">Soluções para todo o ecossistema</h2>
-          <div className="cards-grid">
-            <div className="card">
-              <div className="card-icon"></div>
-              <h3>Para Funcionários</h3>
-              <p>
-                Desafios diários gamificados que incentivam o autoconhecimento, a meditação guiada e o uso de canais de apoio – transformando o equilíbrio emocional em um hábito recompensador.              </p>
-            </div>
-            <div className="card">
-              <div className="card-icon"></div>
-              <h3>Para Psicólogos</h3>
-              <p>
-                Gestão clínica eficiente com prontuários digitais, agendamento simplificado e insights baseados em dados para tratamentos mais assertivos.
-              </p>
-            </div>
-            <div className="card">
-              <div className="card-icon"></div>
-              <h3>Para Gestores</h3>
-              <p>
-                Dashboards em tempo real com indicadores de clima e saúde organizacional, permitindo intervenções preventivas estratégicas.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Call to Action Central */}
-        <section className="cta-section">
-          <h2>Pronto para reduzir o estresse na sua equipe?</h2>
-          <p>Junte-se a centenas de empresas que já estão redefinindo a cultura de trabalho como Burnout Zero.</p>
-          <div className="cta-buttons">
-            <Link to="/login" className="btn-primary btn-large">Login</Link>
-            <Link to="/register" className="btn-outline2 btn-large">Cadastro</Link>
-          </div>
-        </section>
-      </div>
-
-      {/* Footer */}
-      <footer className="footer">
-        <div className="container">
-          <div className="footer-content">
-            <div className="footer-brand">
-              <h3>Burnout Zero</h3>
-              <p>Cultivando mentes, transformando corporações.</p>
-            </div>
-            <div className="footer-links">
-              <a href="#">TERMOS DE USO</a>
-              <a href="#">PRIVACIDADE</a>
-              <a href="#">CONTATO</a>
-              <a href="#">CARREIRAS</a>
-            </div>
-          </div>
-          <div className="copyright">
-            © 2024 BURNOUT ZERO. CULTIVANDO MENTES, TRANSFORMANDO CORPORAÇÕES.
-          </div>
-        </div>
-      </footer>
-    </div>
+      <Box component="footer" sx={{ borderTop: '1px solid', borderColor: alpha('#147DAC', 0.1), textAlign: 'center' }}>
+        <Container maxWidth="lg" sx={{ py: 4 }}>
+          <Stack spacing={1.5} justifyContent="center">
+              <Typography variant="h6" sx={{ fontWeight: 800, color: 'primary.main', textAlign: 'center' }}>
+                Burnout Zero
+              </Typography>
+              <Typography variant="body2" color="text.secondary" textAlign="center">
+                Cultivando mentes, transformando corporações.
+              </Typography>
+          </Stack>
+        </Container>
+      </Box>
+    </Box>
   );
-};
-
-export default BurnoutZeroLanding;
-
-
+}

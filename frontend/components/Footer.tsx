@@ -1,5 +1,5 @@
 // frontend/components/Footer.tsx
-import { Box, Container, Typography, Divider } from '@mui/material';
+import { Box, Container, Typography } from '@mui/material';
 
 export default function Footer() {
   return (
@@ -13,7 +13,7 @@ export default function Footer() {
       }}
     >
       <Container maxWidth="lg">
-        <Divider sx={{ mb: 2 }} />
+        
         <Typography variant="body2" color="text.secondary" align="center">
           © 2026 Burnoutzero. Todos os direitos reservados.
         </Typography>

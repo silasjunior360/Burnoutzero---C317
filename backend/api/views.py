@@ -1,18 +1,19 @@
 from rest_framework import generics, viewsets, status
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.exceptions import PermissionDenied
 from django.db.models import Avg
 from django.utils import timezone
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from .models import User, Assessment, FollowUp, Appointment, Insight, GamificationPoints
+from .models import User, Assessment, FollowUp, Appointment, Insight, GamificationPoints, Sector
 
 from .serializers import (
     UserSerializer, UserCreateSerializer,
     AssessmentSerializer, FollowUpSerializer,
-    AppointmentSerializer
+    AppointmentSerializer, SectorSerializer
 )
 
 
@@ -34,10 +35,10 @@ class UserDetailView(generics.RetrieveUpdateAPIView):
 class UserPasswordChangeView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request):
-        current_password = request.data.get('current_password', '')
-        new_password = request.data.get('new_password', '')
-        confirm_password = request.data.get('confirm_password', '')
+    def _change_password(self, request):
+        current_password = request.data.get('current_password') or request.data.get('currentPassword', '')
+        new_password = request.data.get('new_password') or request.data.get('newPassword', '')
+        confirm_password = request.data.get('confirm_password') or request.data.get('confirmPassword', '')
 
         if not current_password or not new_password or not confirm_password:
             return Response(
@@ -57,6 +58,12 @@ class UserPasswordChangeView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        if new_password.isdigit():
+            return Response(
+                {'error': 'A nova senha não pode conter apenas números.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         try:
             validate_password(new_password, user=request.user)
         except ValidationError as exc:
@@ -71,6 +78,12 @@ class UserPasswordChangeView(APIView):
             {'message': 'Senha alterada com sucesso.'},
             status=status.HTTP_200_OK,
         )
+
+    def post(self, request):
+        return self._change_password(request)
+
+    def patch(self, request):
+        return self._change_password(request)
 
 
 class AssessmentViewSet(viewsets.ModelViewSet):
@@ -144,6 +157,118 @@ class AppointmentViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(employee=self.request.user)
+
+
+def _latest_assessment_for(user):
+    return Assessment.objects.filter(employee=user).order_by('-assessment_date').first()
+
+
+def _assessment_total(assessment):
+    return (
+        assessment.stress
+        + assessment.anxiety
+        + assessment.burnout
+        + assessment.depression
+    )
+
+
+def _assign_sector_name_for_user(user):
+    assessment = _latest_assessment_for(user)
+    if not assessment:
+        return 'Estável'
+
+    total = _assessment_total(assessment)
+    if assessment.risk_level == 'high' or total >= 50:
+        return 'Risco alto'
+    if total >= 20:
+        return 'Em observação'
+    return 'Estável'
+
+
+def _ensure_default_sectors_for_department(department):
+    if Sector.objects.filter(department=department).exists():
+        return
+
+    sector_map = {
+        'Estável': Sector.objects.create(department=department, name='Estável'),
+        'Em observação': Sector.objects.create(department=department, name='Em observação'),
+        'Risco alto': Sector.objects.create(department=department, name='Risco alto'),
+    }
+
+    employees = User.objects.filter(
+        department=department,
+        role__in=['employee', 'psychologist'],
+    )
+    for user in employees:
+        sector_name = _assign_sector_name_for_user(user)
+        sector_map[sector_name].members.add(user)
+
+
+class SectorViewSet(viewsets.ModelViewSet):
+    serializer_class = SectorSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.role != 'manager' or not user.department:
+            return Sector.objects.none()
+
+        _ensure_default_sectors_for_department(user.department)
+        return Sector.objects.filter(department=user.department).prefetch_related('members')
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.role != 'manager':
+            raise PermissionDenied('Acesso negado.')
+        serializer.save(department=user.department)
+
+    def perform_destroy(self, instance):
+        if instance.department != self.request.user.department:
+            raise PermissionDenied('Acesso negado.')
+        instance.delete()
+
+    @action(detail=True, methods=['post'])
+    def assign(self, request, pk=None):
+        sector = self.get_object()
+        username = request.data.get('username', '')
+
+        if not username:
+            return Response({'error': 'Informe o username.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            member = User.objects.get(
+                username=username,
+                department=request.user.department,
+                role__in=['employee', 'psychologist'],
+            )
+        except User.DoesNotExist:
+            return Response({'error': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        for other_sector in Sector.objects.filter(department=request.user.department, members=member).exclude(pk=sector.pk):
+            other_sector.members.remove(member)
+
+        sector.members.add(member)
+        return Response(self.get_serializer(sector).data)
+
+    @action(detail=True, methods=['post'])
+    def remove_member(self, request, pk=None):
+        sector = self.get_object()
+        username = request.data.get('username', '')
+
+        if not username:
+            return Response({'error': 'Informe o username.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            member = User.objects.get(
+                username=username,
+                department=request.user.department,
+                role__in=['employee', 'psychologist'],
+            )
+        except User.DoesNotExist:
+            return Response({'error': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        sector.members.remove(member)
+        return Response(self.get_serializer(sector).data)
 
 
 # ── Geração automática de insight por regra ───────────────────────────────────

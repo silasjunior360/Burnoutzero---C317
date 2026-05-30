@@ -7,6 +7,7 @@ from .views import (
     InsightViewSet, RegisterView, UserDetailView,
     AssessmentViewSet, FollowUpViewSet,
     AppointmentViewSet,
+    SectorViewSet,
     validate_insight, team_overview, my_points,
     UserPasswordChangeView
 )
@@ -24,6 +25,7 @@ router.register(
     basename='appointment'
 )
 router.register(r'insights', InsightViewSet, basename='insight')
+router.register(r'manager/sectors', SectorViewSet, basename='manager-sectors')
 
 urlpatterns = [
     path(

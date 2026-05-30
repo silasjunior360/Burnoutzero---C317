@@ -5,39 +5,103 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
-import { useState } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userName, setUserName] = useState('');
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   const [userAvatar, setUserAvatar] = useState('');
 
-  useEffect(() => {
-    let mounted = true;
+  const getUserDashboardRoute = () => {
+    const roleRaw = (userRole || localStorage.getItem('user_role') || '').toString();
+    const normalizedRole = roleRaw
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+
+    if (normalizedRole.includes('manager') || normalizedRole.includes('gestor') || normalizedRole.includes('gerente')) {
+      return '/manager';
+    }
+
+    if (normalizedRole.includes('psychologist') || normalizedRole.includes('psicologo') || normalizedRole.includes('psicologa')) {
+      return '/psychologist';
+    }
+
+    return '/employee';
+  };
+
+  const handleLogoClick = () => {
+    const currentPath = location.pathname;
+
+    if (currentPath === '/register') {
+      navigate('/login');
+      return;
+    }
+
+    if (currentPath === '/login' || currentPath === '/') {
+      navigate('/');
+      return;
+    }
+
+    if (currentPath === '/employee' || currentPath === '/psychologist' || currentPath === '/manager') {
+      navigate(currentPath);
+      return;
+    }
+
+    if (currentPath === '/home' || currentPath === '/settings') {
+      navigate(getUserDashboardRoute());
+      return;
+    }
+
+    navigate('/');
+  };
+
+  const loadUserProfile = () => {
     import('../services/api').then(({ default: api }) => {
       if (!api || !api.get) {
         return;
       }
       api.get('/users/me/').then((res) => {
-        if (!mounted) return;
         const d = res.data || {};
         const name = (d.first_name || d.username || d.email || 'Usuário') + (d.last_name ? ' ' + d.last_name : '');
         setUserName(name);
-
+        setUserRole(d.role || null);
         setUserAvatar(d.avatar || '');
       }).catch(() => {
         // ignore - keep defaults
-
       });
     }).catch(() => {
       // ignore import errors
     });
-    return () => { mounted = false; };
-  }, []);
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    loadUserProfile();
+
+    const handleProfileUpdated = (event: Event) => {
+      if (!mounted) return;
+      const customEvent = event as CustomEvent<{ avatar?: string; name?: string }>;
+      if (customEvent.detail?.name) {
+        setUserName(customEvent.detail.name);
+      }
+      if (typeof customEvent.detail?.avatar === 'string') {
+        setUserAvatar(customEvent.detail.avatar);
+      }
+      loadUserProfile();
+    };
+
+    window.addEventListener('user-profile-updated', handleProfileUpdated);
+    return () => {
+      mounted = false;
+      window.removeEventListener('user-profile-updated', handleProfileUpdated);
+    };
+  }, [location.pathname]);
   const isAuthPage = ['/login', '/register', '/'].includes(location.pathname);
 
   const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
@@ -77,12 +141,12 @@ export default function Header() {
                 WebkitTextFillColor: 'transparent',
                 fontWeight: 700,
               }}
-              onClick={() => navigate('/')}
+              onClick={handleLogoClick}
             >
               Burnoutzero
             </Typography>
 
-            {!isAuthPage && (
+            {!isAuthPage && userRole !== null && userRole !== 'manager' && (
               <>
                 {/* Divider */}
                 <Divider orientation="vertical" flexItem sx={{ my: 1 }} />

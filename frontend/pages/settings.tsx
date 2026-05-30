@@ -197,12 +197,33 @@ export default function Settings() {
 
 		const reader = new FileReader();
 		reader.onload = () => {
+			const nextAvatar = typeof reader.result === 'string' ? reader.result : '';
 			setProfileForm((current) => ({
 				...current,
-				avatar: typeof reader.result === 'string' ? reader.result : '',
+				avatar: nextAvatar,
 			}));
+			window.dispatchEvent(
+				new CustomEvent('user-profile-updated', {
+					detail: {
+						avatar: nextAvatar,
+						name: getFullName(profileForm),
+					},
+				})
+			);
 		};
 		reader.readAsDataURL(file);
+	};
+
+	const handleRemoveAvatar = () => {
+		setProfileForm((current) => ({ ...current, avatar: '' }));
+		window.dispatchEvent(
+			new CustomEvent('user-profile-updated', {
+				detail: {
+					avatar: '',
+					name: getFullName(profileForm),
+				},
+			})
+		);
 	};
 
 	const handleProfileSubmit = async (event: React.FormEvent) => {
@@ -219,6 +240,14 @@ export default function Settings() {
 				email: profileForm.email,
 				avatar: profileForm.avatar,
 			});
+			window.dispatchEvent(
+				new CustomEvent('user-profile-updated', {
+					detail: {
+						avatar: profileForm.avatar,
+						name: getFullName(profileForm),
+					},
+				})
+			);
 			setSuccessMessage('Perfil atualizado com sucesso.');
 		} catch {
 			setErrorMessage('Não foi possível salvar as alterações do perfil.');
@@ -229,15 +258,25 @@ export default function Settings() {
 
 	const handlePasswordSubmit = async (event: React.FormEvent) => {
 		event.preventDefault();
+		setErrorMessage('');
+		setSuccessMessage('');
 
 		if (passwordForm.newPassword !== passwordForm.confirmPassword) {
 			setErrorMessage('A confirmação da nova senha não confere.');
 			return;
 		}
 
+		if (passwordForm.newPassword.length < 8) {
+			setErrorMessage('A nova senha precisa ter pelo menos 8 caracteres.');
+			return;
+		}
+
+		if (/^\d+$/.test(passwordForm.newPassword)) {
+			setErrorMessage('A nova senha não pode conter apenas números.');
+			return;
+		}
+
 		setSavingPassword(true);
-		setErrorMessage('');
-		setSuccessMessage('');
 
 		try {
 			await api.post('/users/me/password/', {
@@ -249,9 +288,29 @@ export default function Settings() {
 			setPasswordForm(emptyPassword);
 			setSuccessMessage('Senha alterada com sucesso.');
 		} catch (error) {
-			const responseError = error as { response?: { data?: { error?: string } } };
+			const responseError = error as {
+				response?: {
+					status?: number;
+					data?: { error?: string; detail?: string; message?: string; non_field_errors?: string[] };
+				};
+			};
+
+			if (responseError.response?.status === 401) {
+				localStorage.removeItem('access_token');
+				localStorage.removeItem('refresh_token');
+				localStorage.removeItem('user_role');
+				navigate('/login');
+				return;
+			}
+
+			const apiMessage =
+				responseError.response?.data?.error ||
+				responseError.response?.data?.detail ||
+				responseError.response?.data?.message ||
+				responseError.response?.data?.non_field_errors?.[0];
+
 			setErrorMessage(
-				responseError.response?.data?.error || 'Não foi possível alterar a senha.'
+				apiMessage || 'Não foi possível alterar a senha.'
 			);
 		} finally {
 			setSavingPassword(false);
@@ -298,9 +357,7 @@ export default function Settings() {
 					<Typography variant="h3" sx={{ fontWeight: 700, color: 'text.primary' }}>
 						Configurações da conta
 					</Typography>
-					<Typography variant="body1" color="text.secondary" sx={{ maxWidth: 780 }}>
-						Atualize sua foto, nome, e-mail e senha com a identidade visual do BurnoutZero.
-					</Typography>
+					
 				</Stack>
 
 				<Stack spacing={2} sx={{ mb: 3 }}>
@@ -378,11 +435,6 @@ export default function Settings() {
 										onChange={handleAvatarSelect}
 									/>
 
-									<Stack direction="row" spacing={1} flexWrap="wrap" justifyContent="center">
-										<Chip label="Login seguro" color="primary" variant="outlined" />
-										<Chip label="Tema BurnoutZero" color="secondary" variant="outlined" />
-									</Stack>
-
 									<Box sx={{ width: '100%' }}>
 										<Divider sx={{ my: 1 }} />
 										<Stack
@@ -395,9 +447,7 @@ export default function Settings() {
 												<Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
 													Tema do app
 												</Typography>
-												<Typography variant="body2" color="text.secondary">
-													Alterne entre claro e escuro.
-												</Typography>
+												
 											</Box>
 											<FormControlLabel
 												control={
@@ -422,7 +472,7 @@ export default function Settings() {
 										fullWidth
 										variant="text"
 										color="secondary"
-										onClick={() => setProfileForm((current) => ({ ...current, avatar: '' }))}
+										onClick={handleRemoveAvatar}
 										sx={{ borderRadius: 999 }}
 									>
 										Remover foto
@@ -616,7 +666,7 @@ export default function Settings() {
 													onChange={updatePasswordField('newPassword')}
 													fullWidth
 													required
-													helperText="Use uma senha forte com pelo menos 6 caracteres."
+													helperText="Use pelo menos 8 caracteres e não use apenas números."
 													InputProps={{
 														startAdornment: (
 															<InputAdornment position="start">
