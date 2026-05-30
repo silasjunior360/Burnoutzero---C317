@@ -1,8 +1,9 @@
 import { Fragment, useState, useEffect } from 'react';
 import { 
-  Box, Typography, Grid, Paper, Alert, Chip, Card, CardContent,
+  Box, Typography, Grid, Paper, Chip, Card, CardContent,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Collapse, IconButton, TextField, Button, Checkbox, Tabs, Tab, MenuItem
+  Collapse, IconButton, TextField, Button, Checkbox, Tabs, Tab, MenuItem,
+  Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import WarningIcon from '@mui/icons-material/Warning';
 import GroupIcon from '@mui/icons-material/Group';
@@ -23,10 +24,10 @@ interface DashboardData {
   team_members?: TeamMember[];
   total_team_members?: number;
   averages: {
-    avg_stress: number;
-    avg_anxiety: number;
-    avg_burnout: number;
-    avg_depression: number;
+    avg_stress: number | null;
+    avg_anxiety: number | null;
+    avg_burnout: number | null;
+    avg_depression: number | null;
   };
 }
 
@@ -39,130 +40,121 @@ interface TeamMember {
 }
 
 interface SetorMetric {
+  id: number;
   setor: string;
   engajamento: number;
   saude: string;
   alertas: number;
   usuarios: string[];
+  usuarios_detalhes?: Array<{
+    id: number;
+    username: string;
+    first_name: string;
+    last_name: string;
+    role: 'employee' | 'psychologist' | 'manager';
+    engajamento: number;
+    saude: string;
+    alerta: boolean;
+  }>;
 }
+
+const normalizeSetores = (data: unknown): SetorMetric[] => {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (data && typeof data === 'object') {
+    const maybeResults = (data as { results?: unknown }).results;
+    if (Array.isArray(maybeResults)) {
+      return maybeResults as SetorMetric[];
+    }
+  }
+
+  return [];
+};
 
 export default function Manager() {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [expandedSetores, setExpandedSetores] = useState<Record<string, boolean>>({});
-  const [selectedSetores, setSelectedSetores] = useState<Record<string, boolean>>({});
+  const [expandedSetores, setExpandedSetores] = useState<Record<number, boolean>>({});
+  const [selectedSetores, setSelectedSetores] = useState<Record<number, boolean>>({});
   const [teamDetailsExpanded, setTeamDetailsExpanded] = useState(false);
   const [activeSectorTab, setActiveSectorTab] = useState<'unassigned' | 'sectors'>('unassigned');
-  const [setoresStorageKey, setSetoresStorageKey] = useState('burnout-zero-manager-setores-default');
-  const [setoresReady, setSetoresReady] = useState(false);
   const [novoSetor, setNovoSetor] = useState('');
+  const [createSectorDialogOpen, setCreateSectorDialogOpen] = useState(false);
+  const [activeAlertsExpanded, setActiveAlertsExpanded] = useState(false);
   const [metricasSetores, setMetricasSetores] = useState<SetorMetric[]>([]);
 
   useEffect(() => {
-    api.get('/manager/team-overview/')
-      .then(res => setDashboardData(res.data))
-      .catch(err => console.error(err));
-
-    api.get('/users/me/')
-      .then((res) => {
-        const me = res.data || {};
-        const userIdentifier = me.username || me.id || 'default';
-        const companyCode = me.department || 'sem-codigo';
-        const key = `burnout-zero-manager-setores-${userIdentifier}-${companyCode}`;
-        setSetoresStorageKey(key);
-        const fallbackKey = 'burnout-zero-manager-setores-default';
-        const raw = window.localStorage.getItem(key) || window.localStorage.getItem(fallbackKey);
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw) as SetorMetric[];
-            if (Array.isArray(parsed)) {
-              setMetricasSetores(parsed);
-              if (!window.localStorage.getItem(key)) {
-                window.localStorage.setItem(key, JSON.stringify(parsed));
-              }
-            }
-          } catch {
-            setMetricasSetores([]);
-          }
-        } else {
-          setMetricasSetores([]);
-        }
-        setSetoresReady(true);
+    Promise.all([
+      api.get('/manager/team-overview/'),
+      api.get('/manager/sectors/')
+    ])
+      .then(([dashboardRes, sectorsRes]) => {
+        setDashboardData(dashboardRes.data);
+        setMetricasSetores(normalizeSetores(sectorsRes.data));
       })
-      .catch(() => {
-        setMetricasSetores([]);
-        setSetoresReady(true);
-      });
+      .catch((err) => console.error(err));
   }, []);
 
-  useEffect(() => {
-    if (!setoresReady) {
-      return;
-    }
-    window.localStorage.setItem(setoresStorageKey, JSON.stringify(metricasSetores));
-  }, [metricasSetores, setoresStorageKey, setoresReady]);
-
-  const persistMetricasSetores = (nextMetricasSetores: SetorMetric[]) => {
-    setMetricasSetores(nextMetricasSetores);
-    try {
-      window.localStorage.setItem(setoresStorageKey, JSON.stringify(nextMetricasSetores));
-    } catch {
-      // ignore storage errors and keep UI state working
-    }
+  const refreshSectors = async () => {
+    const response = await api.get('/manager/sectors/');
+    setMetricasSetores(normalizeSetores(response.data));
   };
 
   const alerts = dashboardData?.recent_alerts || [];
   const teamMembers = dashboardData?.team_members || [];
   const totalTeamMembers = dashboardData?.total_team_members ?? teamMembers.length;
-  const assignedUsernames = metricasSetores.flatMap((setor) => setor.usuarios);
+  const assignedUsernames = metricasSetores.flatMap((setor) => setor.usuarios || []);
   const unassignedMembers = teamMembers.filter((member) => !assignedUsernames.includes(member.username));
 
-  const handleToggleSetor = (nomeSetor: string) => {
+  const handleToggleSetor = (sectorId: number) => {
     setExpandedSetores((prev) => ({
       ...prev,
-      [nomeSetor]: !prev[nomeSetor]
+      [sectorId]: !prev[sectorId]
     }));
   };
 
-  const handleCreateSetor = () => {
+  const handleCreateSetor = async () => {
     const nome = novoSetor.trim();
     if (!nome) {
       return;
     }
 
-    const alreadyExists = metricasSetores.some(
-      (setor) => setor.setor.toLowerCase() === nome.toLowerCase()
-    );
-    if (alreadyExists) {
-      return;
-    }
-
-    persistMetricasSetores([
-      ...metricasSetores,
-      {
-        setor: nome,
-        engajamento: 0,
-        saude: 'Bom',
-        alertas: 0,
-        usuarios: []
-      }
-    ]);
+    await api.post('/manager/sectors/', { setor: nome });
+    await refreshSectors();
     setNovoSetor('');
+    setCreateSectorDialogOpen(false);
   };
 
-  const handleToggleSelectSetor = (nomeSetor: string) => {
+  const handleOpenCreateSectorDialog = () => {
+    setCreateSectorDialogOpen(true);
+  };
+
+  const handleCancelCreateSector = () => {
+    setNovoSetor('');
+    setCreateSectorDialogOpen(false);
+  };
+
+  const handleToggleSelectSetor = (sectorId: number) => {
     setSelectedSetores((prev) => ({
       ...prev,
-      [nomeSetor]: !prev[nomeSetor]
+      [sectorId]: !prev[sectorId]
     }));
   };
 
-  const handleDeleteSelectedSetores = () => {
-    persistMetricasSetores(metricasSetores.filter((setor) => !selectedSetores[setor.setor]));
+  const handleDeleteSelectedSetores = async () => {
+    await Promise.all(
+      metricasSetores
+        .filter((setor) => selectedSetores[setor.id])
+        .map((setor) => api.delete(`/manager/sectors/${setor.id}/`))
+    );
+    await refreshSectors();
     setExpandedSetores((prev) => {
-      const next: Record<string, boolean> = {};
-      Object.keys(prev).forEach((setor) => {
-        if (!selectedSetores[setor]) {
-          next[setor] = prev[setor];
+      const next: Record<number, boolean> = {};
+      Object.keys(prev).forEach((setorKey) => {
+        const sectorId = Number(setorKey);
+        if (!selectedSetores[sectorId]) {
+          next[sectorId] = prev[sectorId];
         }
       });
       return next;
@@ -172,147 +164,36 @@ export default function Manager() {
 
   const hasSelectedSetores = Object.values(selectedSetores).some(Boolean);
 
-  const handleAssignMemberToSector = (username: string, targetSetor: string) => {
-    if (!targetSetor) {
+  const handleAssignMemberToSector = async (username: string, targetSectorId: number) => {
+    if (!targetSectorId) {
       return;
     }
 
-    persistMetricasSetores(
-      metricasSetores.map((setor) => {
-        const nextUsers = setor.usuarios.filter((usuario) => usuario !== username);
-
-        if (setor.setor === targetSetor) {
-          nextUsers.push(username);
-        }
-
-        return {
-          ...setor,
-          usuarios: nextUsers,
-        };
-      })
-    );
+    await api.post(`/manager/sectors/${targetSectorId}/assign/`, { username });
+    await refreshSectors();
   };
 
-  const handleRemoveMemberFromSector = (username: string) => {
-    persistMetricasSetores(
-      metricasSetores.map((setor) => ({
-        ...setor,
-        usuarios: setor.usuarios.filter((usuario) => usuario !== username),
-      }))
-    );
+  const handleRemoveMemberFromSector = async (username: string, sectorId: number) => {
+    await api.post(`/manager/sectors/${sectorId}/remove_member/`, { username });
+    await refreshSectors();
   };
 
-  const getUserByUsername = (username: string) => {
-    return teamMembers.find((m) => m.username === username) || null;
-  };
+  const activeAttentionMembers = metricasSetores
+    .flatMap((sector) => (sector.usuarios_detalhes || []).filter((user) => user.alerta))
+    .filter((user, index, array) => array.findIndex((item) => item.username === user.username) === index);
 
-  const getUserAlertsCount = (username: string) => {
-    return alerts.filter((a) => a.employee__username === username).length;
-  };
-
-  // deterministic pseudo-random engagement based on username
-  const getUserEngagement = (username: string) => {
-    try {
-      const seenKey = `${setoresStorageKey}-seen-users`;
-      const raw = window.localStorage.getItem(seenKey);
-      const seenMap = raw ? JSON.parse(raw) as Record<string, boolean> : {};
-      if (!seenMap[username]) {
-        // first time we see this user in this manager+company context => default values
-        seenMap[username] = true;
-        try { window.localStorage.setItem(seenKey, JSON.stringify(seenMap)); } catch (e) { void e; }
-        return 100;
-      }
-    } catch {
-      // ignore localStorage errors and fall back to computed value
-    }
-
-    let h = 0;
-    for (let i = 0; i < username.length; i++) {
-      h = (h << 5) - h + username.charCodeAt(i);
-      h |= 0;
-    }
-    const val = Math.abs(h) % 101; // 0..100
-    return val;
-  };
-
-  const getUserHealthStatus = (engagement: number) => {
-    // new thresholds: <30 -> Ruim, 31-75 -> Bom, >75 -> Ótimo
-    if (engagement > 75) return 'Ótimo';
-    if (engagement > 30) return 'Bom';
-    return 'Ruim';
-  };
-
-  const computeSectorEngagement = (setor: SetorMetric) => {
-    if (!setor.usuarios || setor.usuarios.length === 0) return 0;
-    const vals = setor.usuarios.map((u) => getUserEngagement(u));
-    const sum = vals.reduce((s, v) => s + v, 0);
-    return Math.round(sum / vals.length);
-  };
-
-  const computeSectorHasAlert = (setor: SetorMetric) => {
-    if (!setor.usuarios || setor.usuarios.length === 0) return false;
-    return setor.usuarios.some((u) => {
-      const engagement = getUserEngagement(u);
-      const health = getUserHealthStatus(engagement);
-      return health === 'Ruim' || getUserAlertsCount(u) > 0;
-    });
-  };
-
-  const computeSectorHealth = (setor: SetorMetric) => {
-    const avg = computeSectorEngagement(setor);
-    return getUserHealthStatus(avg);
-  };
-
-  const activeAlertUsersCount = Array.from(
-    new Set(
-      metricasSetores.flatMap((setor) =>
-        setor.usuarios.filter((usuario) => {
-          const engagement = getUserEngagement(usuario);
-          const healthStatus = getUserHealthStatus(engagement);
-          return healthStatus === 'Ruim' || getUserAlertsCount(usuario) > 0;
-        })
-      )
-    )
-  ).length;
-
-  const activeAttentionUsernames = Array.from(
-    new Set(
-      metricasSetores.flatMap((setor) =>
-        setor.usuarios.filter((usuario) => {
-          const engagement = getUserEngagement(usuario);
-          const healthStatus = getUserHealthStatus(engagement);
-          return healthStatus === 'Ruim' || getUserAlertsCount(usuario) > 0;
-        })
-      )
-    )
-  );
-  const activeAttentionMembers = activeAttentionUsernames
-    .map((username) => getUserByUsername(username))
-    .filter((member): member is TeamMember => Boolean(member));
-
-  const activeAlertsDisplayCount = activeAlertUsersCount > 0 ? activeAlertUsersCount : alerts.length;
+  const activeAlertsDisplayCount = activeAttentionMembers.length || alerts.length;
+  const hasActiveAlerts = activeAlertsDisplayCount > 0;
   const averageSectorPerformance = metricasSetores.length
-    ? Math.round(
-        metricasSetores.reduce((sum, setor) => sum + computeSectorEngagement(setor), 0) /
-          metricasSetores.length
-      )
+    ? Math.round(metricasSetores.reduce((sum, setor) => sum + setor.engajamento, 0) / metricasSetores.length)
     : 0;
   const overallSectorStatus = (() => {
     if (metricasSetores.length === 0) {
       return 'Sem dados';
     }
 
-    const statusScores = metricasSetores.map((setor) => {
-      const status = computeSectorHealth(setor);
-      if (status === 'Ótimo') return 3;
-      if (status === 'Bom') return 2;
-      return 1;
-    });
-
-    const averageScore = statusScores.reduce((sum, score) => sum + score, 0) / statusScores.length;
-
-    if (averageScore >= 2.5) return 'Ótimo';
-    if (averageScore >= 1.5) return 'Bom';
+    if (averageSectorPerformance >= 75) return 'Ótimo';
+    if (averageSectorPerformance >= 40) return 'Bom';
     return 'Ruim';
   })();
 
@@ -323,85 +204,12 @@ export default function Manager() {
       </Typography>
 
       <Grid container spacing={3}>
-        {/* Alertas Críticos */}
-        <Grid size={{ xs: 12 }}>
-          <Paper sx={{ p: 3, bgcolor: '#ffebee', border: '1px solid #ffcdd2' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-              <WarningIcon color="error" />
-              <Typography variant="h6" color="error">Alertas da Equipe</Typography>
-            </Box>
-            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 700 }}>
-              
-            </Typography>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mb: 2 }}>
-              {activeAttentionMembers.length > 0 ? (
-                activeAttentionMembers.map((member) => {
-                  const fullName = `${member.first_name || ''} ${member.last_name || ''}`.trim();
-                  const label = fullName ? `${fullName} (${member.username})` : member.username;
-                  const initials = (member.first_name || member.username || '?').slice(0, 1).toUpperCase();
-                  return (
-                    <Box
-                      key={member.id}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1.5,
-                        px: 1.25,
-                        py: 0.9,
-                        borderRadius: 1,
-                        bgcolor: '#fff8e1',
-                        border: '1px solid #ffcc80'
-                      }}
-                    >
-                      <Avatar sx={{ width: 28, height: 28, bgcolor: 'warning.main', fontSize: 14 }}>
-                        {initials}
-                      </Avatar>
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
-                          {label}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
-                          Atenção ativa
-                        </Typography>
-                      </Box>
-                    </Box>
-                  );
-                })
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  Nenhum funcionário com atenção no momento.
-                </Typography>
-              )}
-            </Box>
-            {alerts.map((alerta: AppAlert, index: number) => (
-              <Alert 
-                key={index} 
-                severity="warning" 
-                sx={{ mb: 1 }}
-                action={
-                  <Chip 
-                    label={new Date(alerta.assessment_date).toLocaleDateString()} 
-                    size="small" 
-                    color="warning"
-                  />
-                }
-              >
-                <strong>Usuário:</strong> {alerta.employee__username} - Avaliação de alto risco identificada.
-              </Alert>
-            ))}
-          </Paper>
-        </Grid>
-
-        {/* Cards de Métricas Gerais */}
         <Grid size={{ xs: 12, md: 3 }}>
           <Card sx={{ cursor: 'pointer' }} onClick={() => setTeamDetailsExpanded((prev) => !prev)}>
             <CardContent sx={{ textAlign: 'center' }}>
               <GroupIcon sx={{ fontSize: 40, color: 'primary.main', mb: 1 }} />
               <Typography variant="h4">{totalTeamMembers}</Typography>
               <Typography color="text.secondary">Total de Usuários</Typography>
-              <Typography variant="caption" color="text.secondary">
-                
-              </Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -457,33 +265,91 @@ export default function Manager() {
         </Grid>
 
         <Grid size={{ xs: 12, md: 3 }}>
-          <Card>
+          <Card
+            onClick={() => setActiveAlertsExpanded((prev) => !prev)}
+            sx={{
+              cursor: 'pointer',
+              position: 'relative',
+              overflow: 'hidden',
+              border: hasActiveAlerts ? '1px solid #ef9a9a' : '1px solid transparent',
+              backgroundColor: activeAlertsExpanded ? '#ffffff' : hasActiveAlerts ? '#ffcdd2' : 'background.paper',
+              animation: hasActiveAlerts && !activeAlertsExpanded ? 'blinkAlert 1.1s ease-in-out infinite' : 'none',
+              '@keyframes blinkAlert': {
+                '0%, 100%': { backgroundColor: '#ffcdd2' },
+                '50%': { backgroundColor: '#ffebee' }
+              }
+            }}
+          >
             <CardContent sx={{ textAlign: 'center' }}>
               <WarningIcon sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
               <Typography variant="h4">{activeAlertsDisplayCount}</Typography>
               <Typography color="text.secondary">Alertas Ativos</Typography>
+              {alerts.length > 0 && (
+                <Box sx={{ mt: 1.5, textAlign: 'left' }}>
+                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
+                    {alerts[0].employee__username}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    Avaliação de alto risco identificada
+                  </Typography>
+                </Box>
+              )}
             </CardContent>
+            <Collapse in={activeAlertsExpanded} timeout="auto" unmountOnExit>
+              <Box sx={{ px: 2, pb: 2, textAlign: 'left' }}>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700, mb: 1 }}>
+                  Pessoas em alerta
+                </Typography>
+                {activeAttentionMembers.length > 0 ? (
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    {activeAttentionMembers.map((member) => {
+                      const fullName = `${member.first_name || ''} ${member.last_name || ''}`.trim();
+                      const label = fullName ? `${fullName} (${member.username})` : member.username;
+                      const initials = (member.first_name || member.username || '?').slice(0, 1).toUpperCase();
+                      return (
+                        <Box
+                          key={member.id}
+                          sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 1.5,
+                            px: 1.25,
+                            py: 0.9,
+                            borderRadius: 1,
+                            bgcolor: '#fff8e1',
+                            border: '1px solid #ffcc80'
+                          }}
+                        >
+                          <Avatar sx={{ width: 28, height: 28, bgcolor: 'warning.main', fontSize: 14 }}>
+                            {initials}
+                          </Avatar>
+                          <Box sx={{ minWidth: 0 }}>
+                            <Typography variant="body2" sx={{ fontWeight: 600, lineHeight: 1.2 }}>
+                              {label}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.2 }}>
+                              Atenção ativa
+                            </Typography>
+                          </Box>
+                        </Box>
+                      );
+                    })}
+                  </Box>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    Nenhum funcionário com atenção no momento.
+                  </Typography>
+                )}
+              </Box>
+            </Collapse>
           </Card>
         </Grid>
 
-        {/* Tabela por Setor */}
         <Grid size={{ xs: 12 }}>
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ mb: 2 }}>Saúde Mental por Setor</Typography>
             <Box sx={{ display: 'flex', gap: 1, mb: 2, flexWrap: 'wrap' }}>
-              <TextField
-                size="small"
-                label="Novo setor"
-                value={novoSetor}
-                onChange={(e) => setNovoSetor(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleCreateSetor();
-                  }
-                }}
-              />
-              <Button variant="contained" onClick={handleCreateSetor}>
+              <Button variant="contained" onClick={handleOpenCreateSectorDialog}>
                 Criar setor
               </Button>
               <Button
@@ -504,6 +370,32 @@ export default function Manager() {
               <Tab value="unassigned" label={`Sem setor (${unassignedMembers.length})`} />
               <Tab value="sectors" label={`Setores (${metricasSetores.length})`} />
             </Tabs>
+
+            <Dialog open={createSectorDialogOpen} onClose={handleCancelCreateSector} fullWidth maxWidth="sm">
+              <DialogTitle>Criar setor</DialogTitle>
+              <DialogContent sx={{ pt: 1 }}>
+                <TextField
+                  autoFocus
+                  fullWidth
+                  margin="dense"
+                  label="Nome do setor"
+                  value={novoSetor}
+                  onChange={(e) => setNovoSetor(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleCreateSetor();
+                    }
+                  }}
+                />
+              </DialogContent>
+              <DialogActions>
+                <Button onClick={handleCancelCreateSector}>Cancelar</Button>
+                <Button variant="contained" onClick={handleCreateSetor}>
+                  Criar
+                </Button>
+              </DialogActions>
+            </Dialog>
 
             {activeSectorTab === 'unassigned' ? (
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
@@ -533,13 +425,13 @@ export default function Manager() {
                             defaultValue=""
                             sx={{ minWidth: 220 }}
                             disabled={metricasSetores.length === 0}
-                            onChange={(event) => handleAssignMemberToSector(member.username, event.target.value)}
+                            onChange={(event) => handleAssignMemberToSector(member.username, Number(event.target.value))}
                           >
                             <MenuItem value="">
                               <em>Escolher setor</em>
                             </MenuItem>
                             {metricasSetores.map((setor) => (
-                              <MenuItem key={setor.setor} value={setor.setor}>
+                              <MenuItem key={setor.id} value={setor.id}>
                                 {setor.setor}
                               </MenuItem>
                             ))}
@@ -551,136 +443,126 @@ export default function Manager() {
                 )}
               </Box>
             ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell width={60}>Excluir</TableCell>
-                    <TableCell>Setor</TableCell>
-                    <TableCell>Desempenho</TableCell>
-                    <TableCell>Status</TableCell>
-                    <TableCell>Alertas</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {metricasSetores.map((setor, index) => (
-                    <Fragment key={`${setor.setor}-${index}`}>
-                      <TableRow>
-                        <TableCell>
-                          <Checkbox
-                            size="small"
-                            checked={Boolean(selectedSetores[setor.setor])}
-                            onChange={() => handleToggleSelectSetor(setor.setor)}
-                            inputProps={{ 'aria-label': `Selecionar setor ${setor.setor} para exclusão` }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <IconButton
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell width={60}>Excluir</TableCell>
+                      <TableCell>Setor</TableCell>
+                      <TableCell>Desempenho</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Alertas</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {metricasSetores.map((setor) => (
+                      <Fragment key={setor.id}>
+                        <TableRow>
+                          <TableCell>
+                            <Checkbox
                               size="small"
-                              onClick={() => handleToggleSetor(setor.setor)}
-                            >
-                              {expandedSetores[setor.setor] ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
-                            </IconButton>
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>{setor.setor}</Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell>{computeSectorEngagement(setor)}%</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={computeSectorHealth(setor)}
-                            size="small"
-                            color={computeSectorHealth(setor) === 'Ótimo' ? 'success' : computeSectorHealth(setor) === 'Ruim' ? 'error' : 'primary'}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {computeSectorHasAlert(setor) ? (
-                            <Box component="img" src="/Icons/atencao.png" sx={{ width: 18, height: 18 }} alt="Alertas" />
-                          ) : (
-                            <Box component="img" src="/Icons/marca.png" sx={{ width: 18, height: 18 }} alt="OK" />
-                          )}
-                        </TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell colSpan={5} sx={{ py: 0 }}>
-                          <Collapse in={Boolean(expandedSetores[setor.setor])} timeout="auto" unmountOnExit>
-                            <Box sx={{ py: 1.5, px: 1 }}>
-                              {setor.usuarios.length > 0 ? (
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                  {setor.usuarios.map((usuario) => {
-                                    const member = getUserByUsername(usuario);
-                                    const nomeCompleto = member ? `${member.first_name || ''} ${member.last_name || ''}`.trim() || member.username : usuario;
-                                    const engagement = getUserEngagement(usuario);
-                                    const healthStatus = getUserHealthStatus(engagement);
-                                    return (
-                                      <Paper key={`${setor.setor}-${usuario}-detail`} variant="outlined" sx={{ p: 1 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
-                                          
-                                          {/* Avatar */}
-                                          <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
-                                            {((member?.first_name || member?.username || usuario)[0] || '').toUpperCase()}
-                                          </Avatar>
-                                          
-                                          {/* Nome e Cargo */}
-                                          <Box sx={{ flex: 1, width: 180, }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 700, minWidth: 20 }}>{nomeCompleto}</Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                              {member?.role === 'psychologist' ? 'Psicólogo' : 'Funcionário'}
-                                            </Typography>
-                                          </Box>
-
-                                          {/* CONTAINER DAS MÉTRICAS ALINHADAS EM COLUNAS */}
-                                          <Box sx={{ display: 'flex', gap: 4, alignItems: 'center', flex: 1, width: '100%' }}>
-                                            <Typography variant="body2" sx={{ minWidth: 80, textAlign: 'left' }}>
-                                              {engagement}%
-                                            </Typography>
-
-                                            <Box sx={{ flex: 1 }} />
-
-                                            <Box sx={{ minWidth: 70, display: 'flex', justifyContent: 'center' }}>
-                                              <Chip
-                                                label={healthStatus}
-                                                size="small"
-                                                color={healthStatus === 'Ótimo' ? 'success' : healthStatus === 'Ruim' ? 'error' : 'primary'}
-                                              />
-                                            </Box>
-
-                                            <Box sx={{ minWidth: 120, display: 'flex', justifyContent: 'flex-end' }}>
-                                              {healthStatus === 'Ruim' ? (
-                                                <Box component="img" src="/Icons/atencao.png" sx={{ width: 20, height: 20 }} alt="Alerta" />
-                                              ) : (
-                                                <Box component="img" src="/Icons/marca.png" sx={{ width: 20, height: 20 }} alt="OK" />
-                                              )}
-                                            </Box>
-
-                                            {/* Espaçador invisível que empurra o botão Remover totalmente para a direita */}
-                                            <Box sx={{ flexGrow: 1 }} />
-                                            
-                                            {/* Botão Remover */}
-                                            <Button size="small" onClick={() => handleRemoveMemberFromSector(usuario)}>
-                                              Remover
-                                            </Button>
-                                          </Box>
-
-                                        </Box>
-                                      </Paper>
-                                    );
-                                  })}
-                                </Box>
-                              ) : (
-                                <Typography variant="body2" color="text.secondary">
-                                  Nenhum usuário vinculado a este setor ainda.
-                                </Typography>
-                              )}
+                              checked={Boolean(selectedSetores[setor.id])}
+                              onChange={() => handleToggleSelectSetor(setor.id)}
+                              inputProps={{ 'aria-label': `Selecionar setor ${setor.setor} para exclusão` }}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <IconButton
+                                size="small"
+                                onClick={() => handleToggleSetor(setor.id)}
+                              >
+                                {expandedSetores[setor.id] ? <KeyboardArrowUpIcon /> : <KeyboardArrowDownIcon />}
+                              </IconButton>
+                              <Typography variant="body2" sx={{ fontWeight: 600 }}>{setor.setor}</Typography>
                             </Box>
-                          </Collapse>
-                        </TableCell>
-                      </TableRow>
-                    </Fragment>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                          </TableCell>
+                          <TableCell>{setor.engajamento}%</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={setor.saude}
+                              size="small"
+                              color={setor.saude === 'Ótimo' ? 'success' : setor.saude === 'Ruim' ? 'error' : 'primary'}
+                            />
+                          </TableCell>
+                          <TableCell>
+                            {setor.alertas > 0 ? (
+                              <Box component="img" src="/Icons/atencao.png" sx={{ width: 18, height: 18 }} alt="Alertas" />
+                            ) : (
+                              <Box component="img" src="/Icons/marca.png" sx={{ width: 18, height: 18 }} alt="OK" />
+                            )}
+                          </TableCell>
+                        </TableRow>
+                        <TableRow>
+                          <TableCell colSpan={5} sx={{ py: 0 }}>
+                            <Collapse in={Boolean(expandedSetores[setor.id])} timeout="auto" unmountOnExit>
+                              <Box sx={{ py: 1.5, px: 1 }}>
+                                {(setor.usuarios_detalhes || []).length > 0 ? (
+                                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                    {(setor.usuarios_detalhes || []).map((usuario) => {
+                                      const nomeCompleto = `${usuario.first_name || ''} ${usuario.last_name || ''}`.trim() || usuario.username;
+                                      return (
+                                        <Paper key={`${setor.id}-${usuario.username}-detail`} variant="outlined" sx={{ p: 1 }}>
+                                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: '100%' }}>
+                                            <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+                                              {((usuario.first_name || usuario.username)[0] || '').toUpperCase()}
+                                            </Avatar>
+
+                                            <Box sx={{ flex: 1, width: 180 }}>
+                                              <Typography variant="body2" sx={{ fontWeight: 700, minWidth: 20 }}>{nomeCompleto}</Typography>
+                                              <Typography variant="caption" color="text.secondary">
+                                                {usuario.role === 'psychologist' ? 'Psicólogo' : 'Funcionário'}
+                                              </Typography>
+                                            </Box>
+
+                                            <Box sx={{ display: 'flex', gap: 4, alignItems: 'center', flex: 1, width: '100%' }}>
+                                              <Typography variant="body2" sx={{ minWidth: 80, textAlign: 'left' }}>
+                                                {usuario.engajamento}%
+                                              </Typography>
+
+                                              <Box sx={{ flex: 1 }} />
+
+                                              <Box sx={{ minWidth: 70, display: 'flex', justifyContent: 'center' }}>
+                                                <Chip
+                                                  label={usuario.saude}
+                                                  size="small"
+                                                  color={usuario.saude === 'Ótimo' ? 'success' : usuario.saude === 'Ruim' ? 'error' : 'primary'}
+                                                />
+                                              </Box>
+
+                                              <Box sx={{ minWidth: 120, display: 'flex', justifyContent: 'flex-end' }}>
+                                                {usuario.alerta ? (
+                                                  <Box component="img" src="/Icons/atencao.png" sx={{ width: 20, height: 20 }} alt="Alerta" />
+                                                ) : (
+                                                  <Box component="img" src="/Icons/marca.png" sx={{ width: 20, height: 20 }} alt="OK" />
+                                                )}
+                                              </Box>
+
+                                              <Box sx={{ flexGrow: 1 }} />
+
+                                              <Button size="small" onClick={() => handleRemoveMemberFromSector(usuario.username, setor.id)}>
+                                                Remover
+                                              </Button>
+                                            </Box>
+                                          </Box>
+                                        </Paper>
+                                      );
+                                    })}
+                                  </Box>
+                                ) : (
+                                  <Typography variant="body2" color="text.secondary">
+                                    Nenhum usuário vinculado a este setor ainda.
+                                  </Typography>
+                                )}
+                              </Box>
+                            </Collapse>
+                          </TableCell>
+                        </TableRow>
+                      </Fragment>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
             )}
           </Paper>
         </Grid>

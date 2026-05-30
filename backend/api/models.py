@@ -34,6 +34,24 @@ class Assessment(models.Model):
     risk_level = models.CharField(max_length=20, choices=RISK_CHOICES)
 
 
+class Sector(models.Model):
+    department = models.CharField(max_length=100)
+    name = models.CharField(max_length=100)
+    members = models.ManyToManyField(
+        User,
+        related_name='sectors',
+        blank=True,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('department', 'name')
+        ordering = ['name']
+
+    def __str__(self):
+        return f'{self.department} - {self.name}'
+
+
 class FollowUp(models.Model):
     psychologist = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='given_follow_ups'

@@ -91,7 +91,7 @@ export default function Register() {
   };
 
   const validarStep2 = () => {
-    if (formData.perfil === 'psicologo' && !formData.crp) {
+    if (formData.perfil === 'psychologist' && !formData.crp) {
       setError('CRP é obrigatório para psicólogos');
       return false;
     }
@@ -109,13 +109,19 @@ export default function Register() {
       }
       
       try {
-        await api.post('auth/register/', {
+        const roleMap: Record<string, string> = {
+          employee: 'funcionario',
+          psychologist: 'psicologo',
+          manager: 'gestor',
+        };
+
+        await api.post('/auth/register/', {
           username: formData.usuario,
           email: formData.email,
           password: formData.senha,
           first_name: formData.nome.split(' ')[0],
           last_name: formData.nome.split(' ').slice(1).join(' '),
-          role: formData.perfil,
+          role: roleMap[formData.perfil],
           department: formData.empresa
         });
         
@@ -307,7 +313,7 @@ export default function Register() {
                 </RadioGroup>
               </FormControl>
 
-              {formData.perfil === 'psicologo' && (
+              {formData.perfil === 'psychologist' && (
                 <TextField
                   fullWidth
                   label="CRP (Registro profissional)"

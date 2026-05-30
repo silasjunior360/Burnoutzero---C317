@@ -1,7 +1,8 @@
-﻿from groq import Groq
-from django.conf import settings
+﻿from django.conf import settings
+from groq import Groq
 
 _client = Groq(api_key=settings.GROQ_API_KEY)
+
 
 def complete(messages: list[dict], system: str, max_tokens: int = 1024) -> str:
     """Chamada síncrona ao Groq."""
@@ -12,6 +13,7 @@ def complete(messages: list[dict], system: str, max_tokens: int = 1024) -> str:
         max_tokens=max_tokens,
     )
     return resp.choices[0].message.content
+
 
 def stream(messages: list[dict], system: str):
     """Gerador para SSE streaming com Groq."""

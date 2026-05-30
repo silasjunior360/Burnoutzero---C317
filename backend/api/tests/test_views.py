@@ -2,7 +2,7 @@ from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
 from django.contrib.auth import get_user_model
-from api.models import Insight
+from api.models import Assessment, Insight
 
 User = get_user_model()
 
@@ -164,3 +164,107 @@ class ApiProfileSettingsTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password('novaSenha123'))
+
+    def test_change_password_with_patch_and_camel_case_payload(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.patch(
+            reverse('user_password_change'),
+            {
+                'currentPassword': 'password123',
+                'newPassword': 'novaSenha456',
+                'confirmPassword': 'novaSenha456'
+            },
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('novaSenha456'))
+
+    def test_change_password_rejects_numeric_only(self):
+        self.client.force_authenticate(user=self.user)
+
+        response = self.client.post(
+            reverse('user_password_change'),
+            {
+                'current_password': 'password123',
+                'new_password': '12345678',
+                'confirm_password': '12345678'
+            },
+            format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('apenas números', response.data.get('error', ''))
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('password123'))
+
+
+class ApiManagerSectorsTestCase(APITestCase):
+    def setUp(self):
+        self.employee_low = User.objects.create_user(
+            username='func_baixo', password='password', role='employee', department='TI'
+        )
+        self.employee_high = User.objects.create_user(
+            username='func_alto', password='password', role='employee', department='TI'
+        )
+        self.manager = User.objects.create_user(
+            username='gestor_ti', password='password', role='manager', department='TI'
+        )
+        self.psychologist = User.objects.create_user(
+            username='psico_ti', password='password', role='psychologist', department='TI'
+        )
+
+        Assessment.objects.create(
+            employee=self.employee_low,
+            stress=2,
+            anxiety=2,
+            burnout=1,
+            depression=0,
+            risk_level='low',
+        )
+        Assessment.objects.create(
+            employee=self.employee_high,
+            stress=20,
+            anxiety=15,
+            burnout=10,
+            depression=8,
+            risk_level='high',
+        )
+
+    def test_manager_sectors_api(self):
+        self.client.force_authenticate(user=self.manager)
+
+        response = self.client.get(reverse('manager-sectors-list'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(response.data), 3)
+
+        sector_names = [item['setor'] for item in response.data]
+        self.assertIn('Estável', sector_names)
+        self.assertIn('Risco alto', sector_names)
+
+        high_sector = next(item for item in response.data if item['setor'] == 'Risco alto')
+        self.assertIn(self.employee_high.username, high_sector['usuarios'])
+
+        create_response = self.client.post(
+            reverse('manager-sectors-list'),
+            {'setor': 'Novo setor'},
+            format='json'
+        )
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+
+        new_sector_id = create_response.data['id']
+        assign_response = self.client.post(
+            reverse('manager-sectors-assign', args=[new_sector_id]),
+            {'username': self.employee_low.username},
+            format='json'
+        )
+        self.assertEqual(assign_response.status_code, status.HTTP_200_OK)
+
+        remove_response = self.client.post(
+            reverse('manager-sectors-remove-member', args=[new_sector_id]),
+            {'username': self.employee_low.username},
+            format='json'
+        )
+        self.assertEqual(remove_response.status_code, status.HTTP_200_OK)
