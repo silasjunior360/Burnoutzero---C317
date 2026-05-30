@@ -85,3 +85,73 @@ class ApiRouteIntegrationTestCase(APITestCase):
         )
         self.assertEqual(followup_response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(FollowUp.objects.filter(employee=employee).exists(), True)
+
+    def test_manager_cross_department_leakage_and_metrics(self):
+        self._register_user(username='emp_a', role='employee', department='TI')
+        self._register_user(username='emp_b', role='employee', department='RH')
+
+        self._register_user(username='manager_ti', role='manager', department='TI')
+
+        self._authenticate_client(username='emp_a')
+        self.client.post(reverse('assessment-list'), {
+            'stress': 20, 'anxiety': 20, 'burnout': 20, 'depression': 20
+        })
+
+        self._authenticate_client(username='emp_b')
+        self.client.post(reverse('assessment-list'), {
+            'stress': 10, 'anxiety': 10, 'burnout': 10, 'depression': 10
+        })
+
+        self.client.credentials()
+        self._authenticate_client(username='manager_ti')
+
+        response = self.client.get(reverse('team_overview'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        usernames_in_alerts = [alert['employee__username'] for alert in response.data['recent_alerts']]
+        self.assertIn('emp_a', usernames_in_alerts)
+        self.assertNotIn('emp_b', usernames_in_alerts)
+
+        self.assertEqual(float(response.data['averages']['avg_stress']), 20.0)
+
+    def test_appointment_booking_flow(self):
+        self._register_user(username='patient_z', role='employee')
+        self._authenticate_client(username='patient_z')
+
+        response = self.client.post(reverse('appointment-list'), {
+            'psychologist_name': 'Dr. Robert',
+            'date_time': '2026-06-01 10:00'
+        })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['psychologist_name'], 'Dr. Robert')
+        self.assertEqual(response.data['status'], 'scheduled')
+
+        list_response = self.client.get(reverse('appointment-list'))
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(list_response.data), 1)
+        self.assertEqual(list_response.data[0]['psychologist_name'], 'Dr. Robert')
+
+    def test_jwt_token_refresh_cycle_flow(self):
+        self._register_user(username='cycle_user', role='employee')
+
+        login_response = self.client.post(reverse('token_obtain_pair'), {
+            'username': 'cycle_user',
+            'password': 'safePassword123'
+        })
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
+        refresh_token = login_response.data['refresh']
+
+        self.client.credentials(HTTP_AUTHORIZATION='Bearer invalid_token')
+        me_response_fail = self.client.get(reverse('user_me'))
+        self.assertEqual(me_response_fail.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        refresh_response = self.client.post(reverse('token_refresh'), {
+            'refresh': refresh_token
+        })
+        self.assertEqual(refresh_response.status_code, status.HTTP_200_OK)
+        new_access_token = refresh_response.data['access']
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {new_access_token}')
+        me_response_success = self.client.get(reverse('user_me'))
+        self.assertEqual(me_response_success.status_code, status.HTTP_200_OK)
+        self.assertEqual(me_response_success.data['username'], 'cycle_user')
