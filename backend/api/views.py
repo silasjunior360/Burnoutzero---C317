@@ -230,7 +230,23 @@ def validate_insight(request, pk):
 def team_overview(request):
     if request.user.role != 'manager':
         return Response({'error': 'Acesso negado.'}, status=403)
-    employees = User.objects.filter(department=request.user.department)
+    if not request.user.department:
+        return Response({
+            'averages': {
+                'avg_stress': None,
+                'avg_anxiety': None,
+                'avg_burnout': None,
+                'avg_depression': None,
+            },
+            'recent_alerts': [],
+            'team_members': [],
+            'total_team_members': 0,
+        })
+    company_users = User.objects.filter(
+        department=request.user.department,
+        role__in=['employee', 'psychologist']
+    )
+    employees = company_users.filter(role='employee')
     agg = Assessment.objects.filter(employee__in=employees).aggregate(
         avg_stress=Avg('stress'),
         avg_anxiety=Avg('anxiety'),
@@ -240,7 +256,15 @@ def team_overview(request):
     alerts = Assessment.objects.filter(
         employee__in=employees, risk_level='high'
     ).values('employee__username', 'assessment_date').order_by('-assessment_date')[:10]
-    return Response({'averages': agg, 'recent_alerts': list(alerts)})
+    team_members = list(
+        company_users.values('id', 'username', 'first_name', 'last_name', 'role').order_by('username')
+    )
+    return Response({
+        'averages': agg,
+        'recent_alerts': list(alerts),
+        'team_members': team_members,
+        'total_team_members': len(team_members),
+    })
 
 
 # ── Gamificação ──────────────────────────────────────────────────────────

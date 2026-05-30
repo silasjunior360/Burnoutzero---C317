@@ -80,11 +80,50 @@ const getInitials = (profile: ProfileForm) => {
 	return initials || 'U';
 };
 
+const resolveHomeRouteFromUser = (userData: {
+	role?: string;
+	user_type?: string;
+	userType?: string;
+	tipo?: string;
+	tipo_usuario?: string;
+	profile_type?: string;
+}) => {
+	const rawType =
+		userData.role ||
+		userData.user_type ||
+		userData.userType ||
+		userData.tipo ||
+		userData.tipo_usuario ||
+		userData.profile_type ||
+		'employee';
+
+	const normalizedType = rawType
+		.normalize('NFD')
+		.replace(/[\u0300-\u036f]/g, '')
+		.toLowerCase()
+		.trim();
+
+	if (normalizedType.includes('manager') || normalizedType.includes('gerente')) {
+		return '/manager';
+	}
+
+	if (
+		normalizedType.includes('psychologist') ||
+		normalizedType.includes('psicologo') ||
+		normalizedType.includes('psicologa')
+	) {
+		return '/psychologist';
+	}
+
+	return '/employee';
+};
+
 export default function Settings() {
 	const fileInputRef = useRef<HTMLInputElement | null>(null);
 	const navigate = useNavigate();
 	const muiTheme = useTheme();
 	const { mode, toggleTheme } = useThemeMode();
+	const [backRoute, setBackRoute] = useState('/employee');
 	const [profileForm, setProfileForm] = useState<ProfileForm>(emptyProfile);
 	const [passwordForm, setPasswordForm] = useState<PasswordForm>(emptyPassword);
 	const [loading, setLoading] = useState(true);
@@ -105,6 +144,7 @@ export default function Settings() {
 				if (!active) return;
 
 				const data = response.data || {};
+				setBackRoute(resolveHomeRouteFromUser(data));
 				setProfileForm({
 					username: data.username || '',
 					firstName: data.first_name || '',
@@ -284,8 +324,8 @@ export default function Settings() {
 								backgroundColor: muiTheme.palette.background.paper,
 							}}
 						>
-							<CardContent>
-								<Stack spacing={3} alignItems="center" sx={{ textAlign: 'center' }}>
+							<CardContent sx={{ height: '100%' }}>
+								<Stack spacing={3} alignItems="center" sx={{ textAlign: 'center', height: '100%' }}>
 									<Box
 										sx={{
 											position: 'relative',
@@ -381,11 +421,21 @@ export default function Settings() {
 									<Button
 										fullWidth
 										variant="text"
-										color="inherit"
+										color="secondary"
 										onClick={() => setProfileForm((current) => ({ ...current, avatar: '' }))}
 										sx={{ borderRadius: 999 }}
 									>
 										Remover foto
+									</Button>
+
+									<Button
+										sx={{ width: 220, height: 44, borderRadius: 2, mt: 'auto' }}
+										variant="outlined"
+										color="primary"
+										onClick={() => navigate(backRoute)}
+										
+									>
+										Voltar
 									</Button>
 								</Stack>
 							</CardContent>

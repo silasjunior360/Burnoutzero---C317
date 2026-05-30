@@ -13,7 +13,9 @@ export default function Header() {
   const location = useLocation();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userName, setUserName] = useState('');
+
   const [userAvatar, setUserAvatar] = useState('');
+
   useEffect(() => {
     let mounted = true;
     import('../services/api').then(({ default: api }) => {
@@ -25,9 +27,11 @@ export default function Header() {
         const d = res.data || {};
         const name = (d.first_name || d.username || d.email || 'Usuário') + (d.last_name ? ' ' + d.last_name : '');
         setUserName(name);
+
         setUserAvatar(d.avatar || '');
       }).catch(() => {
         // ignore - keep defaults
+
       });
     }).catch(() => {
       // ignore import errors
@@ -132,7 +136,9 @@ export default function Header() {
                   sx={{ p: 0 }}
                   size="large"
                 >
+
                   <Avatar src={userAvatar || undefined} sx={{ width: 40, height: 40, bgcolor: 'primary.main', cursor: 'pointer' }}>
+
                     {userName.split(' ').map(n => n[0]).join('')}
                   </Avatar>
                 </IconButton>
