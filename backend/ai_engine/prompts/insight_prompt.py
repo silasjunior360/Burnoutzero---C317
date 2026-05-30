@@ -23,8 +23,10 @@ Análise do estado atual do funcionário em 2-3 parágrafos.
 [/RECOMENDACOES]
 """
 
+
 def build_system_prompt(context: str) -> str:
     return SYSTEM_TEMPLATE.format(context=context)
+
 
 def build_user_message(assessment) -> str:
     return f"""

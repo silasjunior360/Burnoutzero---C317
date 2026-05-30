@@ -1,4 +1,4 @@
-from .llm_client import complete, stream
+from .llm_client import stream
 from .rag_service import build_context
 from ..models import ChatMessage
 
@@ -31,7 +31,7 @@ class ChatService:
     def _get_history(self) -> list[dict]:
         msgs = ChatMessage.objects.filter(
             user=self.user,
-            session_id=self.session_id
+            session_id=self.session_id,
         ).order_by('created_at')[:20]
         return [{"role": m.role, "content": m.content} for m in msgs]
 
@@ -44,9 +44,9 @@ class ChatService:
         )
 
     def stream_response(self, message: str):
-        context  = build_context(message)
-        system   = SYSTEM_BY_ROLE.get(self.user.role, SYSTEM_BY_ROLE['employee'])
-        history  = self._get_history()
+        build_context(message)
+        system = SYSTEM_BY_ROLE.get(self.user.role, SYSTEM_BY_ROLE['employee'])
+        history = self._get_history()
         messages = history + [{"role": "user", "content": message}]
 
         self._save('user', message)

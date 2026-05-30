@@ -1,4 +1,5 @@
 import re
+
 from .llm_client import complete
 from .rag_service import build_context
 from ..prompts.insight_prompt import build_system_prompt, build_user_message
@@ -10,7 +11,7 @@ def generate_insight(employee, assessment) -> Insight:
         f"burnout stress {assessment.stress} ansiedade {assessment.anxiety} "
         f"depressao {assessment.depression} risco {assessment.risk_level}"
     )
-    system  = build_system_prompt(context)
+    system = build_system_prompt(context)
     message = build_user_message(assessment)
 
     try:
@@ -33,7 +34,7 @@ def generate_insight(employee, assessment) -> Insight:
 
 def _parse_response(raw: str) -> tuple[str, str]:
     analise = re.search(r'\[ANALISE\](.*?)\[/ANALISE\]', raw, re.DOTALL)
-    recs    = re.search(r'\[RECOMENDACOES\](.*?)\[/RECOMENDACOES\]', raw, re.DOTALL)
+    recs = re.search(r'\[RECOMENDACOES\](.*?)\[/RECOMENDACOES\]', raw, re.DOTALL)
     return (
         analise.group(1).strip() if analise else raw,
         recs.group(1).strip() if recs else "",

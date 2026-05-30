@@ -9,7 +9,7 @@ from .services.chat_service import ChatService
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def chat(request):
-    message    = request.data.get('message', '').strip()
+    message = request.data.get('message', '').strip()
     session_id = request.data.get('session_id')
 
     if not message:
@@ -22,8 +22,10 @@ def chat(request):
             yield f"data: {json.dumps({'chunk': chunk})}\n\n"
         yield "data: [DONE]\n\n"
 
-    return StreamingHttpResponse(event_stream(),
-                                 content_type='text/event-stream')
+    return StreamingHttpResponse(
+        event_stream(),
+        content_type='text/event-stream',
+    )
 
 
 @api_view(['DELETE'])
