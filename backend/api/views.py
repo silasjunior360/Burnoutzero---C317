@@ -156,7 +156,21 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         return Appointment.objects.none()
 
     def perform_create(self, serializer):
+        psychologist_name = str(self.request.data.get('psychologist_name', '')).strip()
+        date_time = str(self.request.data.get('date_time', '')).strip()
+        if Appointment.objects.filter(
+            psychologist_name__iexact=psychologist_name,
+            date_time=date_time,
+            status='scheduled'
+        ).exists():
+            from rest_framework.exceptions import ValidationError
+            raise ValidationError("Este horário já está reservado com este psicólogo.")
         serializer.save(employee=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def taken_slots(self, request):
+        taken = Appointment.objects.filter(status='scheduled').values('psychologist_name', 'date_time')
+        return Response(taken)
 
 
 def _latest_assessment_for(user):
@@ -398,10 +412,28 @@ def team_overview(request):
 # ── Gamificação ──────────────────────────────────────────────────────────
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def my_points(request):
+    if request.method == 'POST':
+        pts = request.data.get('points')
+        reason = request.data.get('reason', 'streak_bonus')
+        if pts is not None:
+            try:
+                pts = int(pts)
+                GamificationPoints.objects.create(
+                    employee=request.user,
+                    points=pts,
+                    reason=reason
+                )
+            except ValueError:
+                return Response({'error': 'Points must be an integer.'}, status=status.HTTP_400_BAD_REQUEST)
+
     points = GamificationPoints.objects.filter(employee=request.user)
     total = sum(p.points for p in points)
     history = list(points.values('points', 'reason', 'earned_at'))
-    return Response({'total_points': total, 'history': history})
+    return Response({
+        'total_points': total,
+        'total_pontos': total,
+        'history': history
+    })

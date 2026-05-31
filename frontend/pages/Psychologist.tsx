@@ -165,7 +165,7 @@ const PatientDetailModal = ({
     if (!editingInsight) return;
     setSaving(true);
     try {
-      await api.patch(`/insights/${editingInsight.id}/validate_insight/`, {
+      await api.patch(`/insights/${editingInsight.id}/validate/`, {
         text: editingInsight.text,
         recommendations: editingInsight.recommendations,
       });
@@ -551,7 +551,7 @@ export default function Psychologist() {
     if (!selectedInsight) return;
     setSavingInsight(true);
     try {
-      await api.patch(`/insights/${selectedInsight.id}/validate_insight/`, {
+      await api.patch(`/insights/${selectedInsight.id}/validate/`, {
         text: selectedInsight.text,
         recommendations: selectedInsight.recommendations,
       });

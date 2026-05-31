@@ -66,7 +66,7 @@ describe('Login Page', () => {
         password: 'pass123'
       });
       expect(localStorage.getItem('access_token')).toBe('fake-access-token');
-      expect(mockedUsedNavigate).toHaveBeenCalledWith('/employee');
+      expect(mockedUsedNavigate).toHaveBeenCalledWith('/home');
     }, { timeout: 3000 });
   });
 

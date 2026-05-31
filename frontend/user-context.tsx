@@ -92,7 +92,7 @@ export const UserProvider = ({ children }: { children: ReactNode }) => {
 
       const nextUser = normalizeUser({
         ...profileRes.data,
-        total_pontos: pointsRes.data?.total_pontos ?? profileRes.data?.xp,
+        total_pontos: pointsRes.data?.total_pontos ?? pointsRes.data?.total_points ?? profileRes.data?.xp,
       });
 
       setUser(nextUser);

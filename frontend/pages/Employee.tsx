@@ -153,12 +153,13 @@ export default function Employee() {
 
   const fetchData = async () => {
     try {
-      const [avRes, inRes, ptsRes, agRes, usersRes] = await Promise.all([
+      const [avRes, inRes, ptsRes, agRes, usersRes, takenRes] = await Promise.all([
         api.get('/assessments/').catch(() => ({ data: [] })),
         api.get('/insights/').catch(() => ({ data: [] })),
         api.get('/gamification/my-points/').catch(() => ({ data: { total_points: 0, history: [] } })),
         api.get('/appointments/').catch(() => ({ data: [] })),
-        api.get('/users/').catch(() => ({ data: [] }))
+        api.get('/users/').catch(() => ({ data: [] })),
+        api.get('/appointments/taken_slots/').catch(() => ({ data: [] }))
       ]);
       
       const sortedAssessments = (avRes.data || []).sort((a: Assessment, b: Assessment) => 
@@ -171,10 +172,19 @@ export default function Employee() {
       setHistoryData(ptsRes.data?.history || []);
       setUpcomingAppointments(agRes.data || []);
 
+      const takenSlots = takenRes.data || [];
+      const defaultSlots = ['09:00', '10:30', '14:00', '16:00'];
+ 
       const fetchedPsicologos = (usersRes.data || [])
         .filter((u: any) => u.role === 'psychologist')
         .map((u: any) => {
           const nomeStr = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username;
+          const availableSlots = defaultSlots.filter(slot => 
+            !takenSlots.some((t: any) => 
+              t.psychologist_name?.trim().toLowerCase() === nomeStr.trim().toLowerCase() && 
+              t.date_time?.trim() === slot.trim()
+            )
+          );
           return {
             id: u.id,
             nome: nomeStr,
@@ -183,15 +193,28 @@ export default function Employee() {
             avaliacoes: Math.floor(Math.random() * 50) + 10,
             avatar: getInitials(nomeStr),
             cor: getAvatarColor(nomeStr),
-            horarios: ['09:00', '10:30', '14:00', '16:00'],
-            disponivelHoje: true,
+            horarios: availableSlots,
+            disponivelHoje: availableSlots.length > 0,
           };
         });
-
+ 
       if (fetchedPsicologos.length > 0) {
         setPsicologos(fetchedPsicologos);
       } else {
-        setPsicologos(fallbackPsicologos);
+        const filteredFallbacks = fallbackPsicologos.map(p => {
+          const availableSlots = p.horarios.filter(slot => 
+            !takenSlots.some((t: any) => 
+              t.psychologist_name?.trim().toLowerCase() === p.nome.trim().toLowerCase() && 
+              t.date_time?.trim() === slot.trim()
+            )
+          );
+          return {
+            ...p,
+            horarios: availableSlots,
+            disponivelHoje: availableSlots.length > 0
+          };
+        });
+        setPsicologos(filteredFallbacks);
       }
     } catch (error) {
       console.error(error);
@@ -312,11 +335,45 @@ export default function Employee() {
       });
       fetchData();
     } catch (error: any) {
-      const backendMessage = error?.response?.data?.detail || error?.response?.data?.error || error?.message;
+      let backendMessage = error?.response?.data?.detail || error?.response?.data?.error;
+      if (!backendMessage && error?.response?.data) {
+        if (Array.isArray(error.response.data)) {
+          backendMessage = error.response.data[0];
+        } else if (typeof error.response.data === 'object') {
+          const values = Object.values(error.response.data);
+          if (values.length > 0) {
+            const firstVal = values[0];
+            backendMessage = Array.isArray(firstVal) ? firstVal[0] : String(firstVal);
+          }
+        } else if (typeof error.response.data === 'string') {
+          backendMessage = error.response.data;
+        }
+      }
+      if (!backendMessage) {
+        backendMessage = error.message;
+      }
       setOpenDialog(false);
       setSnackbar({
         open: true,
         message: backendMessage ? `Erro ao agendar: ${backendMessage}` : 'Erro ao agendar consulta.',
+        severity: 'error',
+      });
+    }
+  };
+
+  const handleCancelarAgendamento = async (id: number) => {
+    try {
+      await api.delete(`/appointments/${id}/`);
+      setSnackbar({
+        open: true,
+        message: 'Consulta cancelada com sucesso.',
+        severity: 'success',
+      });
+      fetchData();
+    } catch (error: any) {
+      setSnackbar({
+        open: true,
+        message: 'Erro ao cancelar consulta.',
         severity: 'error',
       });
     }
@@ -591,16 +648,24 @@ export default function Employee() {
                     Próximas Consultas
                   </Typography>
 
-                  {upcomingAppointments.length > 0 ? (
-                    upcomingAppointments.map((consulta) => (
+                  {upcomingAppointments.filter((c) => c.status === 'scheduled').length > 0 ? (
+                    upcomingAppointments.filter((c) => c.status === 'scheduled').map((consulta) => (
                       <Box key={consulta.id} sx={{ mt: 2, display: 'flex', alignItems: 'center', gap: 2, p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
                         <CalendarMonthIcon color="primary" />
                         <Box sx={{ flex: 1 }}>
                           <Typography variant="subtitle2">{consulta.psychologist_name}</Typography>
                           <Typography variant="caption" color="text.secondary">
-                            Data e Hora: {consulta.date_time} | Status: {consulta.status}
+                            Data e Hora: {consulta.date_time}
                           </Typography>
                         </Box>
+                        <Button 
+                          variant="text" 
+                          color="error" 
+                          size="small" 
+                          onClick={() => handleCancelarAgendamento(consulta.id)}
+                        >
+                          Cancelar
+                        </Button>
                       </Box>
                     ))
                   ) : (

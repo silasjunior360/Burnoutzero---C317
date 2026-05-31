@@ -15,6 +15,14 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
+    role = serializers.CharField(required=False, default='employee')
+
+    ROLE_ALIASES = {
+        'funcionario': 'employee',
+        'psicologo': 'psychologist',
+        'gestor': 'manager',
+    }
+
     class Meta:
         model = User
         fields = [
@@ -24,14 +32,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {'password': {'write_only': True}}
 
-        ROLE_ALIASES = {
-            'funcionario': 'employee',
-            'psicologo': 'psychologist',
-            'gestor': 'manager',
-        }
-
-        def validate_role(self, value):
-            return self.ROLE_ALIASES.get(value, value)
+    def validate_role(self, value):
+        mapped_value = self.ROLE_ALIASES.get(value, value)
+        valid_roles = [choice[0] for choice in User.ROLE_CHOICES]
+        if mapped_value not in valid_roles:
+            raise serializers.ValidationError(f"Invalid role: {value}")
+        return mapped_value
 
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)

@@ -28,6 +28,7 @@ import {
 } from '@mui/icons-material';
 import ChatIcon from '@mui/icons-material/Chat';
 import api from '../services/api';
+import { useUser } from '../user-context';
 
 import { keyframes } from '@mui/system';
 import brasaPng from '../../Icons/brasa.png';
@@ -389,8 +390,8 @@ const BreathingExercise = ({ onComplete }: { onComplete: (xp: number) => void })
   );
 };
 
-const DailyWordsMission = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void }) => {
-  const STORAGE_KEY = 'burnout-zero-daily-words';
+const DailyWordsMission = ({ username, onCompleteXp }: { username: string; onCompleteXp: (xp: number) => void }) => {
+  const STORAGE_KEY = `burnout-zero-daily-words-${username || 'default'}`;
   
   const [state, setState] = useState(() => readStorage<{
     collectedWords: string[];
@@ -515,8 +516,8 @@ const DailyWordsMission = ({ onCompleteXp }: { onCompleteXp: (xp: number) => voi
   );
 };
 
-const MoodChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void }) => {
-  const STORAGE_KEY = 'burnout-zero-mood-challenge';
+const MoodChallenge = ({ username, onCompleteXp }: { username: string; onCompleteXp: (xp: number) => void }) => {
+  const STORAGE_KEY = `burnout-zero-mood-challenge-${username || 'default'}`;
   const todayKey = getLocalDateKey();
 
   const [state, setState] = useState(() => readStorage<{
@@ -680,8 +681,8 @@ const MoodChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void })
   );
 };
 
-const StreakChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void }) => {
-  const STORAGE_KEY = 'burnout-zero-streak';
+const StreakChallenge = ({ username, onCompleteXp }: { username: string; onCompleteXp: (xp: number) => void }) => {
+  const STORAGE_KEY = `burnout-zero-streak-${username || 'default'}`;
   const todayKey = getLocalDateKey();
   const yesterdayKey = getYesterdayKey();
 
@@ -729,13 +730,13 @@ const StreakChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void 
   );
 };
 
-const WaterChallenge = ({ onGainXp }: { onGainXp: (xp: number) => void }) => {
+const WaterChallenge = ({ username, onGainXp }: { username: string; onGainXp: (xp: number) => void }) => {
   const SIP_ML = 200;
   const TARGET_ML = 3000;
   const COOLDOWN_MS = 15 * 60 * 1000;
   
   const todayKey = getLocalDateKey();
-  const STORAGE_KEY = 'burnout-zero-water-weekly';
+  const STORAGE_KEY = `burnout-zero-water-weekly-${username || 'default'}`;
 
   const [totalMl, setTotalMl] = useState(() => {
     const stored = readStorage<{ history: Record<string, number>; awardedDate?: string }>(STORAGE_KEY, {
@@ -864,7 +865,7 @@ export default function Jornada() {
   useEffect(() => {
     if (!openRewards) return;
 
-    const streakStore = readStorage<{ streakDays?: number }>('burnout-zero-streak', { streakDays: 0 });
+    const streakStore = readStorage<{ streakDays?: number }>(`burnout-zero-streak-${user.username || 'default'}`, { streakDays: 0 });
     const streakDays = streakStore.streakDays ?? 0;
     let consistencyTier = -1;
     if (streakDays >= 365) consistencyTier = 4; 
@@ -873,7 +874,7 @@ export default function Jornada() {
     else if (streakDays >= 7) consistencyTier = 1;
     else if (streakDays >= 1) consistencyTier = 0;
 
-    const waterStore = readStorage<{ history: Record<string, number> }>('burnout-zero-water-weekly', { history: {} });
+    const waterStore = readStorage<{ history: Record<string, number> }>(`burnout-zero-water-weekly-${user.username || 'default'}`, { history: {} });
     const hist = waterStore.history || {};
     const dayValues = Object.values(hist || {});
     const daysWith2L = dayValues.filter((v) => v >= 2000).length;
@@ -916,7 +917,7 @@ export default function Jornada() {
           data.avatar ||
           ((data.first_name ? data.first_name[0] : data.username ? data.username[0] : 'U') +
             (data.last_name ? data.last_name[0] : ''));
-        const pontos = typeof pointsData.total_pontos === 'number' ? pointsData.total_pontos : 0;
+        const pontos = typeof pointsData.total_pontos === 'number' ? pointsData.total_pontos : (typeof pointsData.total_points === 'number' ? pointsData.total_points : 0);
 
         const profile = {
           nome,
@@ -925,7 +926,7 @@ export default function Jornada() {
           xp: pontos,
           xpProximo: data.xp_proximo ?? 1500,
           pontos,
-          diasAtivo: data.dias_ativo ?? readStorage<{ streakDays?: number }>('burnout-zero-streak', { streakDays: 0 }).streakDays ?? 0,
+          diasAtivo: data.dias_ativo ?? readStorage<{ streakDays?: number }>(`burnout-zero-streak-${data.username || 'default'}`, { streakDays: 0 }).streakDays ?? 0,
           level: data.level ?? 1,
           username: data.username || '',
         };
@@ -948,7 +949,7 @@ export default function Jornada() {
   const [isWeeklyExpanded, setIsWeeklyExpanded] = useState(true);
   const [isConquestExpanded, setIsConquestExpanded] = useState(true);
 
-  const handleGainXp = (xp: number) => {
+  const handleGainXp = async (xp: number) => {
     setTotalXp((prev) => prev + xp);
     setUser((prev) => {
       const next = {
@@ -963,6 +964,12 @@ export default function Jornada() {
       }
       return next;
     });
+
+    try {
+      await api.post('/gamification/my-points/', { points: xp, reason: 'streak_bonus' });
+    } catch (err) {
+      console.error('Erro ao salvar pontos no backend:', err);
+    }
   };
 
   const conquistas = [
@@ -1028,7 +1035,7 @@ export default function Jornada() {
     .filter((achievement) => achievement.obtained);
 
   const WeeklyHydrationChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void }) => {
-    const STORAGE_KEY = 'burnout-zero-water-weekly';
+    const STORAGE_KEY = `burnout-zero-water-weekly-${user.username || 'default'}`;
     const TARGET_DAILY_ML = 2000;
     const TARGET_DAYS = 5;
     const [history, setHistory] = useState<Record<string, number>>({});
@@ -1197,8 +1204,8 @@ export default function Jornada() {
                 <CardContent>
                   <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                     <BreathingExercise onComplete={handleGainXp} />
-                    <WaterChallenge onGainXp={handleGainXp} />
-                    <DailyWordsMission onCompleteXp={handleGainXp} />
+                    <WaterChallenge key={`water-${user.username}`} username={user.username} onGainXp={handleGainXp} />
+                    <DailyWordsMission key={`words-${user.username}`} username={user.username} onCompleteXp={handleGainXp} />
                   </Box>
                 </CardContent>
               )}
@@ -1224,11 +1231,11 @@ export default function Jornada() {
               <CardContent sx={{ p: 3 }}>
                 <Grid container spacing={3}>
                   <Grid size={{ xs: 12 }}>
-                    <WeeklyHydrationChallenge onCompleteXp={handleGainXp} />
+                    <WeeklyHydrationChallenge key={`weekly-water-${user.username}`} onCompleteXp={handleGainXp} />
                   </Grid>
                   <Grid size={{ xs: 12 }}>
                     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                      <MoodChallenge onCompleteXp={handleGainXp} />
+                      <MoodChallenge key={`mood-${user.username}`} username={user.username} onCompleteXp={handleGainXp} />
                     </Box>
                   </Grid>
                 </Grid>
@@ -1399,7 +1406,7 @@ export default function Jornada() {
                   </Typography>
                 </Box>
               )}
-              <StreakChallenge onCompleteXp={handleGainXp} />
+              <StreakChallenge key={`streak-${user.username}`} username={user.username} onCompleteXp={handleGainXp} />
               <Button
                 fullWidth
                 variant="outlined"

@@ -32,6 +32,20 @@ vi.mock('recharts', async () => {
   };
 });
 
+vi.mock('../user-context', () => ({
+  useUser: () => ({
+    user: {
+      id: 1,
+      username: 'test_user',
+      first_name: 'Test',
+      last_name: 'User',
+      role: 'employee',
+      avatar: 'TU',
+      total_pontos: 100,
+    },
+  }),
+}));
+
 describe('Employee Dashboard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
