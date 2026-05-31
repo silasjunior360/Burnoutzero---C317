@@ -53,19 +53,12 @@ urlpatterns = [
         UserPasswordChangeView.as_view(),
         name='user_password_change'
     ),
-    path('', 
-        include(router.urls)
-    ),
-    path('insights/<int:pk>/validate/',
+    path('', include(router.urls)),
+    path(
+        'insights/<int:pk>/validate/',
         validate_insight,
-        name='validate_insight'
+        name='validate_insight',
     ),
-    path('manager/team-overview/',
-        team_overview,
-        name='team_overview'
-    ),
-    path('gamification/my-points/',
-        my_points,
-        name='my_points'
-    ),
+    path('manager/team-overview/', team_overview, name='team_overview'),
+    path('gamification/my-points/', my_points, name='my_points'),
 ]
