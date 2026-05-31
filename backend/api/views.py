@@ -156,7 +156,9 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         return Appointment.objects.none()
 
     def perform_create(self, serializer):
-        psychologist_name = str(self.request.data.get('psychologist_name', '')).strip()
+        psychologist_name = str(
+            self.request.data.get('psychologist_name', '')
+        ).strip()
         date_time = str(self.request.data.get('date_time', '')).strip()
         if Appointment.objects.filter(
             psychologist_name__iexact=psychologist_name,
@@ -164,12 +166,17 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             status='scheduled'
         ).exists():
             from rest_framework.exceptions import ValidationError
-            raise ValidationError("Este horário já está reservado com este psicólogo.")
+            raise ValidationError(
+                "Este horário já está reservado com este psicólogo."
+            )
         serializer.save(employee=self.request.user)
 
     @action(detail=False, methods=['get'])
     def taken_slots(self, request):
-        taken = Appointment.objects.filter(status='scheduled').values('psychologist_name', 'date_time')
+        taken = (
+            Appointment.objects.filter(status='scheduled')
+            .values('psychologist_name', 'date_time')
+        )
         return Response(taken)
 
 
