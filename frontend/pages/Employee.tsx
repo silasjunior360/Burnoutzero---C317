@@ -22,6 +22,7 @@ import {
 } from 'recharts';
 import { useUser } from '../user-context';
 import api from '../services/api';
+import AIChat from '../components/AIChat/AIChat';
 
 type SnackbarSeverity = 'success' | 'error' | 'warning' | 'info';
 
@@ -129,7 +130,6 @@ export default function Employee() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<Profile>({ firstName: '', lastName: '', username: '' });
   const [showChat, setShowChat] = useState(false);
-  const [message, setMessage] = useState('');
   
   const [psicologos, setPsicologos] = useState<Psicologo[]>([]);
   const [selectedPsicologo, setSelectedPsicologo] = useState<Psicologo | null>(null);
@@ -630,43 +630,7 @@ export default function Employee() {
           </Grid>
         </>
       ) : (
-        <Paper sx={{ p: 3, height: '600px', display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <Avatar sx={{ bgcolor: 'primary.main' }}>IA</Avatar>
-              <Box>
-                <Typography variant="h6">Assistente de Acolhimento</Typography>
-                <Typography variant="caption" color="text.secondary">
-                  IA de suporte emocional
-                </Typography>
-              </Box>
-            </Box>
-            <Button onClick={() => setShowChat(false)}>Voltar</Button>
-          </Box>
-
-          <Box sx={{ flex: 1, overflow: 'auto', mb: 2, p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
-            <Box sx={{ display: 'flex', mb: 2 }}>
-              <Avatar sx={{ bgcolor: 'primary.main', mr: 1, width: 32, height: 32 }}>IA</Avatar>
-              <Paper sx={{ p: 2, maxWidth: '80%', bgcolor: 'primary.light', color: 'white' }}>
-                <Typography>Olá! Como você está se sentindo hoje? Estou aqui para ouvir você.</Typography>
-              </Paper>
-            </Box>
-          </Box>
-
-          <Box sx={{ display: 'flex', gap: 1 }}>
-            <TextField 
-              fullWidth 
-              placeholder="Digite sua mensagem..."
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              size="small"
-            />
-            <Button variant="contained">Enviar</Button>
-          </Box>
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-            Lembre-se: este chat é um espaço de acolhimento e não substitui acompanhamento profissional.
-          </Typography>
-        </Paper>
+        <AIChat onClose={() => setShowChat(false)} />
       )}
 
       <Dialog open={openScheduleForm} onClose={() => setOpenScheduleForm(false)} maxWidth="sm" fullWidth>

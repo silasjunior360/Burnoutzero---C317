@@ -1,3 +1,5 @@
+import uuid
+
 from .llm_client import stream
 from .rag_service import build_context
 from ..models import ChatMessage
@@ -26,7 +28,7 @@ Responda sempre em português do Brasil.
 class ChatService:
     def __init__(self, user, session_id=None):
         self.user = user
-        self.session_id = session_id
+        self.session_id = session_id or uuid.UUID(int=0)
 
     def _get_history(self) -> list[dict]:
         msgs = ChatMessage.objects.filter(
