@@ -6,39 +6,32 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useState } from 'react';
-import { useEffect } from 'react';
+import { useUser } from '../user-context';
+
+const isEmployeeRole = (role?: string): boolean => {
+  if (!role) return false;
+  const normalized = (role || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+  
+  return normalized.includes('employee') || normalized.includes('funcionario');
+};
 
 export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [userName, setUserName] = useState('');
+  const { user } = useUser();
 
-  const [userAvatar, setUserAvatar] = useState('');
+  const userName = user
+    ? `${user.first_name || user.username || user.email || 'Usuário'}${user.last_name ? ' ' + user.last_name : ''}`
+    : '';
+  const userAvatar = user?.avatar || '';
 
-  useEffect(() => {
-    let mounted = true;
-    import('../services/api').then(({ default: api }) => {
-      if (!api || !api.get) {
-        return;
-      }
-      api.get('/users/me/').then((res) => {
-        if (!mounted) return;
-        const d = res.data || {};
-        const name = (d.first_name || d.username || d.email || 'Usuário') + (d.last_name ? ' ' + d.last_name : '');
-        setUserName(name);
-
-        setUserAvatar(d.avatar || '');
-      }).catch(() => {
-        // ignore - keep defaults
-
-      });
-    }).catch(() => {
-      // ignore import errors
-    });
-    return () => { mounted = false; };
-  }, []);
   const isAuthPage = ['/login', '/register', '/'].includes(location.pathname);
+  const isEmployee = user ? isEmployeeRole(user.role as string) : false;
 
   const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -82,7 +75,7 @@ export default function Header() {
               Burnoutzero
             </Typography>
 
-            {!isAuthPage && (
+            {!isAuthPage && isEmployee && (
               <>
                 {/* Divider */}
                 <Divider orientation="vertical" flexItem sx={{ my: 1 }} />
@@ -127,7 +120,7 @@ export default function Header() {
             )}
           </Box>
 
-          {!isAuthPage && (
+          {!isAuthPage && user && (
             <>
               {/* Menu de Usuário */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
