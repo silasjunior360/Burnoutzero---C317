@@ -23,9 +23,12 @@ import {
   TrendingUp as TrendingUpIcon,
   Bolt as BoltIcon,
   ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
+  ExpandLess as ExpandLessIcon,
+  CalendarMonth as CalendarMonthIcon
 } from '@mui/icons-material';
- 
+import ChatIcon from '@mui/icons-material/Chat';
+import api from '../services/api';
+
 import { keyframes } from '@mui/system';
 import brasaPng from '../../Icons/brasa.png';
 import correntezaPng from '../../Icons/correnteza.png';
@@ -373,7 +376,7 @@ const BreathingExercise = ({ onComplete }: { onComplete: (xp: number) => void })
 
         {progress === 100 && (
           <Box sx={{ mt: 1, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
-            <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 600 }}>
+            <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
               ✓ Sessão concluída — +50 XP
             </Typography>
             <Typography variant="caption" sx={{ color: 'success.dark', mt: 1, display: 'block' }}>
@@ -850,7 +853,7 @@ export default function Jornada() {
     username: ''
   });
 
-  const [totalXp, setTotalXp] = useState(user.xp);
+  const [totalXp, setTotalXp] = useState(0);
   const [backRoute, setBackRoute] = useState('/employee');
   const [selectedConquestIndex, setSelectedConquestIndex] = useState<number | null>(null);
   const [openRewards, setOpenRewards] = useState(false);
@@ -895,65 +898,52 @@ export default function Jornada() {
   // fetch profile and sync basic stats on mount
   useEffect(() => {
     let mounted = true;
-    import('../services/api').then(({ default: api }) => {
 
-      api.get('/users/me/').then((res) => {
+    const loadUserProfile = async () => {
+      try {
+        const [profileRes, pointsRes] = await Promise.all([
+          api.get('/users/me/'),
+          api.get('/gamification/my-points/'),
+        ]);
+
         if (!mounted) return;
-        const data = res.data || {};
-        setBackRoute(resolveHomeRouteFromUser(data));
-        const nome = (data.first_name || data.username || data.email || 'Usuário') + (data.last_name ? ' ' + data.last_name : '');
-        const username = data.username || '';
-        const profile: {
-          nome: string;
-          titulo: string;
-          avatar: string;
-          xp: number;
-          xpProximo: number;
-          pontos: number;
-          diasAtivo: number;
-          level: number;
-          username: string;
-        } = {
+
+        const data = profileRes.data || {};
+        const pointsData = pointsRes.data || {};
+
+        const nome = [data.first_name, data.last_name].filter(Boolean).join(' ') || data.username || data.email || 'Usuário';
+        const avatar =
+          data.avatar ||
+          ((data.first_name ? data.first_name[0] : data.username ? data.username[0] : 'U') +
+            (data.last_name ? data.last_name[0] : ''));
+        const pontos = typeof pointsData.total_pontos === 'number' ? pointsData.total_pontos : 0;
+
+        const profile = {
           nome,
-          titulo: '',
-          avatar: (data.first_name ? data.first_name[0] : (data.username ? data.username[0] : 'U')) + (data.last_name ? data.last_name[0] : ''),
-          xp: 0,
-          xpProximo: 1500,
-          pontos: 0,
-          diasAtivo: 0,
-          level: 1,
-          username
+          titulo: data.role || data.tipo || data.user_type || data.tipo_usuario || data.profile_type || '',
+          avatar,
+          xp: pontos,
+          xpProximo: data.xp_proximo ?? 1500,
+          pontos,
+          diasAtivo: data.dias_ativo ?? readStorage<{ streakDays?: number }>('burnout-zero-streak', { streakDays: 0 }).streakDays ?? 0,
+          level: data.level ?? 1,
+          username: data.username || '',
         };
 
-        // compute diasAtivo from local storage streak
-        const streakStoreLocal = readStorage<{ streakDays?: number }>('burnout-zero-streak', { streakDays: 0 });
-        profile.diasAtivo = streakStoreLocal.streakDays ?? 0;
-
-        // baseline xp estimate: streakDays * 10
-        profile.xp = (profile.diasAtivo || 0) * 10;
-        profile.pontos = profile.xp;
-
-        // if we have persisted pontos (XP total) use it as the canonical total
-        try {
-          const storedPontos = readStorage<number>('burnout-zero-pontos', profile.pontos || 0);
-          profile.pontos = storedPontos;
-          profile.xp = storedPontos;
-        } catch {
-          // ignore read storage errors
-        }
-
+        setBackRoute(resolveHomeRouteFromUser(data));
         setUser(profile);
-        setTotalXp(profile.xp);
-      }).catch(() => {
-        // ignore - keep defaults
+        setTotalXp(pontos);
+      } catch (error) {
+        console.error('Erro ao carregar perfil:', error);
+      }
+    };
 
-      });
-
-    });
+    void loadUserProfile();
 
     return () => { mounted = false; };
   }, []);
   const navigate = useNavigate();
+  const [tabValue, setTabValue] = useState('home');
   const [isDailyExpanded, setIsDailyExpanded] = useState(true);
   const [isWeeklyExpanded, setIsWeeklyExpanded] = useState(true);
   const [isConquestExpanded, setIsConquestExpanded] = useState(true);
@@ -1127,9 +1117,51 @@ export default function Jornada() {
         <Typography variant="h5" sx={{ color: 'text.secondary', mb: 2 }}>
           Olá, {user.nome}! Vamos começar sua jornada de hoje?
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="outlined" onClick={() => navigate(backRoute)} sx={{ borderRadius: 2 }}>
-            Voltar
+
+        <Box sx={{ mt: 3, display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <Button
+            variant={tabValue === 'area' ? 'contained' : 'outlined'}
+            onClick={() => {
+              setTabValue('area');
+              navigate(backRoute);
+            }}
+            sx={{ borderRadius: 2, minWidth: 140, textTransform: 'none' }}
+          >
+            Histórico
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<ChatIcon />}
+            onClick={() => {
+              // request Employee page to open chat view
+              setTabValue('chat');
+              navigate(backRoute, { state: { openChat: true } });
+            }}
+            sx={{ borderRadius: 2, minWidth: 240, textTransform: 'none' }}
+          >
+            Chat de Acolhimento
+          </Button>
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={() => {
+              // navigate to the employee area and request the evaluation dialog to open
+              navigate(backRoute, { state: { openAvaliacao: true } });
+            }}
+            sx={{ borderRadius: 2, minWidth: 180, textTransform: 'none' }}
+          >
+            Nova Avaliação
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<CalendarMonthIcon />}
+            onClick={() => {
+              setTabValue('schedule');
+              navigate(backRoute, { state: { openSchedule: true } });
+            }}
+            sx={{ borderRadius: 2, minWidth: 220, textTransform: 'none' }}
+          >
+            Agendar Consulta
           </Button>
           <Button
             variant="outlined"
@@ -1359,7 +1391,7 @@ export default function Jornada() {
               </Grid>
               {selectedConquestIndex !== null && (
                 <Box sx={{ mt: 2, p: 2, borderRadius: 1, bgcolor: 'success.light' }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'success.main' }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'white' }}>
                     {conquistas[selectedConquestIndex].titulo}
                   </Typography>
                   <Typography variant="caption" color="success.dark">

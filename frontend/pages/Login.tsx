@@ -19,6 +19,30 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import EmailIcon from '@mui/icons-material/Email';
 import LockIcon from '@mui/icons-material/Lock';
 
+const resolveHomeRouteFromRole = (role?: string): string => {
+  if (!role) return '/home';
+
+  const normalized = (role || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+
+  if (normalized.includes('manager') || normalized.includes('gerente')) {
+    return '/manager';
+  }
+
+  if (
+    normalized.includes('psychologist') ||
+    normalized.includes('psicologo') ||
+    normalized.includes('psicologa')
+  ) {
+    return '/psychologist';
+  }
+
+  return '/home';
+};
+
 export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
@@ -44,13 +68,10 @@ export default function Login() {
       const userResponse = await api.get('/users/me/');
       const userData = userResponse.data;
       
-      if (userData.role === 'psychologist') {
-        navigate('/psychologist');
-      } else if (userData.role === 'manager') {
-        navigate('/manager');
-      } else {
-        navigate('/employee');
-      }
+      localStorage.setItem('user_role', userData.role || 'employee');
+      
+      const targetRoute = resolveHomeRouteFromRole(userData.role);
+      navigate(targetRoute);
     } catch (err) {
       const axiosError = err as { response?: { status: number } };
       if (axiosError.response && axiosError.response.status === 401) {
