@@ -1,4 +1,4 @@
-from rest_framework import generics, viewsets, status
+from rest_framework import generics, viewsets, status, serializers
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
@@ -165,8 +165,7 @@ class AppointmentViewSet(viewsets.ModelViewSet):
             date_time=date_time,
             status='scheduled'
         ).exists():
-            from rest_framework.exceptions import ValidationError
-            raise ValidationError(
+            raise serializers.ValidationError(
                 "Este horário já está reservado com este psicólogo."
             )
         serializer.save(employee=self.request.user)
@@ -343,7 +342,6 @@ class InsightViewSet(viewsets.ReadOnlyModelViewSet):
         return Insight.objects.all()
 
     def get_serializer_class(self):
-        from rest_framework import serializers
 
         class InsightSerializer(serializers.ModelSerializer):
             class Meta:
