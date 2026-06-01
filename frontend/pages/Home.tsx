@@ -28,7 +28,6 @@ import {
 } from '@mui/icons-material';
 import ChatIcon from '@mui/icons-material/Chat';
 import api from '../services/api';
-import { useUser } from '../user-context';
 
 import { keyframes } from '@mui/system';
 import brasaPng from '../../Icons/brasa.png';

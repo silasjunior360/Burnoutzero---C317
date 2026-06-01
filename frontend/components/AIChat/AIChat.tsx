@@ -61,7 +61,7 @@ const AIChat = ({ onClose }: AIChatProps) => {
                     return newMessages;
                 });
             });
-        } catch (error) {
+        } catch {
             setMessages(prev => {
                 const newMessages = [...prev];
                 const lastMsgIndex = newMessages.length - 1;

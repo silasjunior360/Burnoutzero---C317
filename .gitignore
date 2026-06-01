@@ -34,3 +34,8 @@ dist-ssr
 # Other
 .env
 coverage/
+
+# Playwright
+playwright-report/
+test-results/
+

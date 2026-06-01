@@ -112,6 +112,28 @@ type Profile = {
   username: string;
 };
 
+type UserObj = {
+  id: number;
+  username: string;
+  first_name?: string;
+  last_name?: string;
+  role?: string;
+  department?: string;
+};
+
+type TakenSlot = {
+  psychologist_name?: string;
+  date_time?: string;
+};
+
+type AxiosErrorLike = {
+  response?: {
+    status?: number;
+    data?: unknown;
+  };
+  message?: string;
+};
+
 const getProfileDisplayName = (profile: Profile) =>
   [profile.firstName, profile.lastName].filter(Boolean).join(' ') || profile.username || 'Usuário';
 
@@ -162,25 +184,27 @@ export default function Employee() {
         api.get('/appointments/taken_slots/').catch(() => ({ data: [] }))
       ]);
       
-      const sortedAssessments = (avRes.data || []).sort((a: Assessment, b: Assessment) => 
+      const assessmentsList = Array.isArray(avRes.data) ? avRes.data : [];
+      const sortedAssessments = [...assessmentsList].sort((a: Assessment, b: Assessment) => 
         new Date(a.assessment_date).getTime() - new Date(b.assessment_date).getTime()
       );
       
       setAssessments(sortedAssessments);
-      setInsightsData(inRes.data || []);
-      setPontos(ptsRes.data?.total_points || 0);
-      setHistoryData(ptsRes.data?.history || []);
-      setUpcomingAppointments(agRes.data || []);
+      setInsightsData(Array.isArray(inRes.data) ? inRes.data : []);
+      setPontos(ptsRes.data?.total_points ?? ptsRes.data?.total_pontos ?? 0);
+      setHistoryData(Array.isArray(ptsRes.data?.history) ? ptsRes.data.history : []);
+      setUpcomingAppointments(Array.isArray(agRes.data) ? agRes.data : []);
 
-      const takenSlots = takenRes.data || [];
+      const takenSlots = Array.isArray(takenRes.data) ? takenRes.data : [];
       const defaultSlots = ['09:00', '10:30', '14:00', '16:00'];
  
-      const fetchedPsicologos = (usersRes.data || [])
-        .filter((u: any) => u.role === 'psychologist')
-        .map((u: any) => {
+      const usersList = Array.isArray(usersRes.data) ? usersRes.data : [];
+      const fetchedPsicologos = usersList
+        .filter((u: UserObj) => u.role === 'psychologist')
+        .map((u: UserObj) => {
           const nomeStr = `${u.first_name || ''} ${u.last_name || ''}`.trim() || u.username;
           const availableSlots = defaultSlots.filter(slot => 
-            !takenSlots.some((t: any) => 
+            !takenSlots.some((t: TakenSlot) => 
               t.psychologist_name?.trim().toLowerCase() === nomeStr.trim().toLowerCase() && 
               t.date_time?.trim() === slot.trim()
             )
@@ -203,7 +227,7 @@ export default function Employee() {
       } else {
         const filteredFallbacks = fallbackPsicologos.map(p => {
           const availableSlots = p.horarios.filter(slot => 
-            !takenSlots.some((t: any) => 
+            !takenSlots.some((t: TakenSlot) => 
               t.psychologist_name?.trim().toLowerCase() === p.nome.trim().toLowerCase() && 
               t.date_time?.trim() === slot.trim()
             )
@@ -233,19 +257,25 @@ export default function Employee() {
 
   useEffect(() => {
     if (!contextUser) return;
-    setProfile({
-      firstName: contextUser.first_name || '',
-      lastName: contextUser.last_name || '',
-      username: contextUser.username || '',
-    });
+    setTimeout(() => {
+      setProfile({
+        firstName: contextUser.first_name || '',
+        lastName: contextUser.last_name || '',
+        username: contextUser.username || '',
+      });
+    }, 0);
   }, [contextUser]);
 
   const location = useLocation();
   useEffect(() => {
-    const state = location?.state as any;
-    if (state?.openAvaliacao) setOpenAvaliacaoDialog(true);
-    if (state?.openChat) setShowChat(true);
-    if (state?.openSchedule) setOpenScheduleForm(true);
+    const state = location?.state as { openAvaliacao?: boolean; openChat?: boolean; openSchedule?: boolean } | null;
+    if (!state) return;
+
+    setTimeout(() => {
+      if (state.openAvaliacao) setOpenAvaliacaoDialog(true);
+      if (state.openChat) setShowChat(true);
+      if (state.openSchedule) setOpenScheduleForm(true);
+    }, 0);
   }, [location]);
 
   const handleEnviarAvaliacao = async () => {
@@ -334,23 +364,28 @@ export default function Employee() {
         severity: 'success',
       });
       fetchData();
-    } catch (error: any) {
-      let backendMessage = error?.response?.data?.detail || error?.response?.data?.error;
-      if (!backendMessage && error?.response?.data) {
-        if (Array.isArray(error.response.data)) {
-          backendMessage = error.response.data[0];
-        } else if (typeof error.response.data === 'object') {
-          const values = Object.values(error.response.data);
+    } catch (error) {
+      const err = error as AxiosErrorLike;
+      let backendMessage = err?.response?.data
+        ? (typeof err.response.data === 'string'
+            ? err.response.data
+            : (err.response.data as Record<string, unknown>)?.detail || (err.response.data as Record<string, unknown>)?.error)
+        : undefined;
+
+      const dataObj = err?.response?.data as Record<string, unknown> | unknown[] | undefined;
+      if (!backendMessage && dataObj) {
+        if (Array.isArray(dataObj)) {
+          backendMessage = String(dataObj[0]);
+        } else if (typeof dataObj === 'object') {
+          const values = Object.values(dataObj);
           if (values.length > 0) {
             const firstVal = values[0];
-            backendMessage = Array.isArray(firstVal) ? firstVal[0] : String(firstVal);
+            backendMessage = Array.isArray(firstVal) ? String(firstVal[0]) : String(firstVal);
           }
-        } else if (typeof error.response.data === 'string') {
-          backendMessage = error.response.data;
         }
       }
       if (!backendMessage) {
-        backendMessage = error.message;
+        backendMessage = err.message;
       }
       setOpenDialog(false);
       setSnackbar({
@@ -370,7 +405,7 @@ export default function Employee() {
         severity: 'success',
       });
       fetchData();
-    } catch (error: any) {
+    } catch {
       setSnackbar({
         open: true,
         message: 'Erro ao cancelar consulta.',

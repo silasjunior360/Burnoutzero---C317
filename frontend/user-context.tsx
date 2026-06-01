@@ -33,20 +33,42 @@ const USER_STORAGE_KEY = 'burnout-zero-user';
 
 const UserContext = createContext<UserContextValue | undefined>(undefined);
 
-const normalizeUser = (data: any): UserProfile => ({
-  ...data,
-  username: data.username || '',
-  first_name: data.first_name || '',
-  last_name: data.last_name || '',
-  email: data.email || '',
-  avatar: data.avatar || '',
-  role: data.role || data.user_type || data.tipo || data.tipo_usuario || data.profile_type || 'employee',
-  xp: typeof data.total_pontos === 'number' ? data.total_pontos : data.xp ?? 0,
-  total_pontos: typeof data.total_pontos === 'number' ? data.total_pontos : data.xp ?? 0,
-  xp_proximo: data.xp_proximo ?? 1500,
-  dias_ativo: data.dias_ativo ?? 0,
-  level: data.level ?? 1,
-});
+const normalizeUser = (data: Record<string, unknown>): UserProfile => {
+  const getStr = (val: unknown): string => typeof val === 'string' ? val : '';
+  const getNum = (val: unknown): number => typeof val === 'number' ? val : 0;
+
+  const username = getStr(data.username);
+  const first_name = getStr(data.first_name);
+  const last_name = getStr(data.last_name);
+  const email = getStr(data.email);
+  const avatar = getStr(data.avatar);
+  
+  const role = getStr(data.role || data.user_type || data.tipo || data.tipo_usuario || data.profile_type) || 'employee';
+  
+  const total_pontos = typeof data.total_pontos === 'number'
+    ? data.total_pontos
+    : (typeof data.xp === 'number' ? data.xp : 0);
+
+  const xp = total_pontos;
+  const xp_proximo = getNum(data.xp_proximo) || 1500;
+  const dias_ativo = getNum(data.dias_ativo) || 0;
+  const level = getNum(data.level) || 1;
+
+  return {
+    ...data,
+    username,
+    first_name,
+    last_name,
+    email,
+    avatar,
+    role,
+    xp,
+    total_pontos,
+    xp_proximo,
+    dias_ativo,
+    level,
+  };
+};
 
 const getStoredUser = (): UserProfile | null => {
   if (typeof window === 'undefined') return null;

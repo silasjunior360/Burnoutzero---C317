@@ -124,7 +124,7 @@ export default function Settings() {
 	const navigate = useNavigate();
 	const muiTheme = useTheme();
 	const { mode, toggleTheme } = useThemeMode();
-	const { user, loading: userLoading, updateUser } = useUser();
+	const { user, loading: userLoading } = useUser();
 	const [backRoute, setBackRoute] = useState('/employee');
 	const [profileForm, setProfileForm] = useState<ProfileForm>(emptyProfile);
 	const [passwordForm, setPasswordForm] = useState<PasswordForm>(emptyPassword);
@@ -211,7 +211,7 @@ export default function Settings() {
 		setSuccessMessage('');
 
 		try {
-			const response = await api.patch('/users/me/', {
+			await api.patch('/users/me/', {
 				username: profileForm.username,
 				first_name: profileForm.firstName,
 				last_name: profileForm.lastName,
