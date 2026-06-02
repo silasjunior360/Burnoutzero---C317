@@ -3,7 +3,7 @@ import { expect, test, describe, vi, beforeEach } from 'vitest';
 import ProtectedRoute from './ProtectedRoute';
 
 vi.mock('react-router-dom', () => ({
-  Navigate: vi.fn(({ to }: any) => <div data-testid="navigate" data-to={to} />),
+  Navigate: vi.fn(({ to }: { to: string }) => <div data-testid="navigate" data-to={to} />),
   Outlet: vi.fn(() => <div data-testid="outlet" />),
 }));
 

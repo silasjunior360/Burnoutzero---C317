@@ -36,16 +36,20 @@ describe('Settings Page', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useThemeMode as any).mockReturnValue({
+    vi.mocked(useThemeMode).mockReturnValue({
       mode: 'light',
       toggleTheme: mockToggleTheme,
+      setMode: vi.fn(),
     });
   });
 
   test('should redirect to login if user is not authenticated', () => {
-    (useUser as any).mockReturnValue({
+    vi.mocked(useUser).mockReturnValue({
       user: null,
       loading: false,
+      refreshUser: vi.fn(),
+      updateUser: vi.fn(),
+      logout: vi.fn(),
     });
 
     render(
@@ -58,7 +62,7 @@ describe('Settings Page', () => {
   });
 
   test('should render profile fields with user values', () => {
-    (useUser as any).mockReturnValue({
+    vi.mocked(useUser).mockReturnValue({
       user: {
         username: 'john_doe',
         first_name: 'John',
@@ -68,6 +72,9 @@ describe('Settings Page', () => {
         role: 'employee',
       },
       loading: false,
+      refreshUser: vi.fn(),
+      updateUser: vi.fn(),
+      logout: vi.fn(),
     });
 
     render(
@@ -83,9 +90,12 @@ describe('Settings Page', () => {
   });
 
   test('should toggle theme mode on switch click', () => {
-    (useUser as any).mockReturnValue({
+    vi.mocked(useUser).mockReturnValue({
       user: { username: 'john_doe', role: 'employee' },
       loading: false,
+      refreshUser: vi.fn(),
+      updateUser: vi.fn(),
+      logout: vi.fn(),
     });
 
     render(
@@ -101,11 +111,14 @@ describe('Settings Page', () => {
   });
 
   test('should submit profile edits successfully', async () => {
-    (useUser as any).mockReturnValue({
+    vi.mocked(useUser).mockReturnValue({
       user: { username: 'john_doe', role: 'employee' },
       loading: false,
+      refreshUser: vi.fn(),
+      updateUser: vi.fn(),
+      logout: vi.fn(),
     });
-    (apiMock.patch as any).mockResolvedValue({});
+    vi.mocked(apiMock.patch).mockResolvedValue({});
 
     render(
       <MemoryRouter>
@@ -132,11 +145,14 @@ describe('Settings Page', () => {
   });
 
   test('should validate and change password successfully', async () => {
-    (useUser as any).mockReturnValue({
+    vi.mocked(useUser).mockReturnValue({
       user: { username: 'john_doe', role: 'employee' },
       loading: false,
+      refreshUser: vi.fn(),
+      updateUser: vi.fn(),
+      logout: vi.fn(),
     });
-    (apiMock.post as any).mockResolvedValue({});
+    vi.mocked(apiMock.post).mockResolvedValue({});
 
     render(
       <MemoryRouter>
@@ -166,9 +182,12 @@ describe('Settings Page', () => {
   });
 
   test('should display password validation error if passwords do not match', async () => {
-    (useUser as any).mockReturnValue({
+    vi.mocked(useUser).mockReturnValue({
       user: { username: 'john_doe', role: 'employee' },
       loading: false,
+      refreshUser: vi.fn(),
+      updateUser: vi.fn(),
+      logout: vi.fn(),
     });
 
     render(
@@ -192,9 +211,12 @@ describe('Settings Page', () => {
   });
 
   test('should display password validation error if new password is under 8 characters', async () => {
-    (useUser as any).mockReturnValue({
+    vi.mocked(useUser).mockReturnValue({
       user: { username: 'john_doe', role: 'employee' },
       loading: false,
+      refreshUser: vi.fn(),
+      updateUser: vi.fn(),
+      logout: vi.fn(),
     });
 
     render(
@@ -218,9 +240,12 @@ describe('Settings Page', () => {
   });
 
   test('should display password validation error if new password contains only digits', async () => {
-    (useUser as any).mockReturnValue({
+    vi.mocked(useUser).mockReturnValue({
       user: { username: 'john_doe', role: 'employee' },
       loading: false,
+      refreshUser: vi.fn(),
+      updateUser: vi.fn(),
+      logout: vi.fn(),
     });
 
     render(
@@ -244,11 +269,14 @@ describe('Settings Page', () => {
   });
 
   test('should display error message when profile edit api fails', async () => {
-    (useUser as any).mockReturnValue({
+    vi.mocked(useUser).mockReturnValue({
       user: { username: 'john_doe', role: 'employee' },
       loading: false,
+      refreshUser: vi.fn(),
+      updateUser: vi.fn(),
+      logout: vi.fn(),
     });
-    (apiMock.patch as any).mockRejectedValue(new Error('Network error'));
+    vi.mocked(apiMock.patch).mockRejectedValue(new Error('Network error'));
 
     render(
       <MemoryRouter>

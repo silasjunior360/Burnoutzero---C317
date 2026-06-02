@@ -37,7 +37,7 @@ describe('Header Component', () => {
     );
 
   test('should load and render user profile data', async () => {
-    (apiMock.get as any).mockResolvedValue({
+    vi.mocked(apiMock.get).mockResolvedValue({
       data: {
         first_name: 'John',
         last_name: 'Doe',
@@ -60,7 +60,7 @@ describe('Header Component', () => {
     mockLocation.pathname = '/settings';
     localStorage.setItem('user_role', 'psychologist');
 
-    (apiMock.get as any).mockResolvedValue({
+    vi.mocked(apiMock.get).mockResolvedValue({
       data: { role: 'psychologist' },
     });
 
@@ -76,7 +76,7 @@ describe('Header Component', () => {
     localStorage.setItem('access_token', 'token');
     localStorage.setItem('refresh_token', 'refresh');
 
-    (apiMock.get as any).mockResolvedValue({
+    vi.mocked(apiMock.get).mockResolvedValue({
       data: { first_name: 'John', role: 'employee' },
     });
 
@@ -94,7 +94,7 @@ describe('Header Component', () => {
   });
 
   test('should listen to user-profile-updated custom events', async () => {
-    (apiMock.get as any).mockResolvedValue({
+    vi.mocked(apiMock.get).mockResolvedValue({
       data: { first_name: 'John', role: 'employee' },
     });
 
@@ -113,7 +113,7 @@ describe('Header Component', () => {
   });
 
   test('should fallback to defaults if profile load fails', async () => {
-    (apiMock.get as any).mockRejectedValue(new Error('API error'));
+    vi.mocked(apiMock.get).mockRejectedValue(new Error('API error'));
 
     renderHeader();
 

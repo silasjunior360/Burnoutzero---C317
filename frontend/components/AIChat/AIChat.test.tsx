@@ -30,8 +30,8 @@ describe('AIChat Component', () => {
   });
 
   test('should send message and stream response chunks successfully', async () => {
-    (streamAIChat as any).mockImplementation(
-      async (msg: string, sessionId: string, onChunk: (text: string) => void) => {
+    vi.mocked(streamAIChat).mockImplementation(
+      async (_msg: string, _sessionId: string, onChunk: (text: string) => void) => {
         onChunk("Estou ");
         onChunk("aqui ");
         onChunk("ajudando.");
@@ -56,7 +56,7 @@ describe('AIChat Component', () => {
   });
 
   test('should handle stream error gracefully by appending error text', async () => {
-    (streamAIChat as any).mockRejectedValue(new Error("API Error"));
+    vi.mocked(streamAIChat).mockRejectedValue(new Error("API Error"));
 
     render(<AIChat onClose={mockOnClose} />);
 
