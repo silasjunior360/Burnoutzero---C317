@@ -344,7 +344,7 @@ export default function Settings() {
 			}}
 		>
 			<Container maxWidth="lg">
-				<Stack spacing={1.5} sx={{ mb: 3 }}>
+				<Stack spacing={1} sx={{ mb: 3 }}>
 					<Chip
 						label="Perfil do usuário"
 						sx={{

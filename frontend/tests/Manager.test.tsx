@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { MockedFunction } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
@@ -47,6 +47,32 @@ describe('Manager Dashboard Page', () => {
           },
         });
       }
+      if (url === '/manager/sectors/') {
+        return Promise.resolve({
+          data: [
+            {
+              id: 1,
+              setor: 'Operações',
+              engajamento: 42,
+              saude: 'Bom',
+              alertas: 1,
+              usuarios: ['emp_alert'],
+              usuarios_detalhes: [
+                {
+                  id: 10,
+                  username: 'emp_alert',
+                  first_name: 'Ana',
+                  last_name: 'Silva',
+                  role: 'employee',
+                  engajamento: 42,
+                  saude: 'Bom',
+                  alerta: true,
+                },
+              ],
+            },
+          ],
+        });
+      }
       return Promise.resolve({ data: {} });
     });
 
@@ -59,16 +85,24 @@ describe('Manager Dashboard Page', () => {
     expect(api.get).toHaveBeenCalledWith('/manager/team-overview/');
 
     await waitFor(() => {
-      expect(screen.getByText(/emp_alert/i)).toBeInTheDocument();
-      expect(screen.getByText(/Avaliação de alto risco identificada/i)).toBeInTheDocument();
+      expect(screen.getByText(/Alertas Ativos/i)).toBeInTheDocument();
     });
 
     expect(screen.getByText('Total de Usuários')).toBeInTheDocument();
-    expect(screen.getByText('Desempenho Médio')).toBeInTheDocument();
+    expect(screen.getByText('Desempenho Semanal Médio')).toBeInTheDocument();
     expect(screen.getByText('Status Geral')).toBeInTheDocument();
 
     const alertsCard = screen.getByText('Alertas Ativos').closest('.MuiCardContent-root');
     expect(alertsCard).toBeInTheDocument();
+
+    if (alertsCard?.parentElement) {
+      fireEvent.click(alertsCard.parentElement);
+    }
+
+    await waitFor(() => {
+      expect(screen.getByText(/Pessoas em alerta/i)).toBeInTheDocument();
+      expect(screen.getByText(/emp_alert/i)).toBeInTheDocument();
+    });
 
     expect(screen.getByText(/Saúde Mental por Setor/i)).toBeInTheDocument();
   });

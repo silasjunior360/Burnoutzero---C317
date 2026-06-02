@@ -9,6 +9,7 @@ from .views import (
     AppointmentViewSet,
     SectorViewSet,
     validate_insight, team_overview, my_points,
+    gamification_me, award_gamification_points,
     UserPasswordChangeView
 )
 
@@ -57,4 +58,6 @@ urlpatterns = [
     path('insights/<int:pk>/validate/', validate_insight, name='validate_insight'),
     path('manager/team-overview/', team_overview, name='team_overview'),
     path('gamification/my-points/', my_points, name='my_points'),
+    path('gamification/me/', gamification_me, name='gamification_me'),
+    path('gamification/me/award/', award_gamification_points, name='gamification_award'),
 ]

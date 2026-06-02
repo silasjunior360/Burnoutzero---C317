@@ -37,7 +37,7 @@ describe('Login Page', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByLabelText(/Usuário/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/Email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Senha/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Entrar/i })).toBeInTheDocument();
   });
@@ -56,7 +56,7 @@ describe('Login Page', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByLabelText(/Usuário/i), { target: { value: 'user1' } });
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'user1' } });
     fireEvent.change(screen.getByLabelText(/Senha/i), { target: { value: 'pass123' } });
     fireEvent.submit(screen.getByRole('button', { name: /Entrar/i }).closest('form')!);
 
@@ -84,7 +84,7 @@ describe('Login Page', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByLabelText(/Usuário/i), { target: { value: 'psico' } });
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'psico' } });
     fireEvent.change(screen.getByLabelText(/Senha/i), { target: { value: 'pass' } });
     fireEvent.submit(screen.getByRole('button', { name: /Entrar/i }).closest('form')!);
 
@@ -104,11 +104,11 @@ describe('Login Page', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByLabelText(/Usuário/i), { target: { value: 'wrong' } });
+    fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'wrong' } });
     fireEvent.submit(screen.getByRole('button', { name: /Entrar/i }).closest('form')!);
 
     await waitFor(() => {
-      expect(screen.getByText(/Usuário ou senha inválidos/i)).toBeInTheDocument();
+      expect(screen.getByText(/Email ou senha inválidos/i)).toBeInTheDocument();
     }, { timeout: 3000 });
   });
 });

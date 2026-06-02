@@ -92,6 +92,7 @@ describe('Register Page', () => {
         first_name: 'Silas',
         last_name: 'Junior',
         role: 'funcionario',
+        company_code: '',
         department: '',
       });
       expect(mockedUsedNavigate).toHaveBeenCalledWith('/login');
