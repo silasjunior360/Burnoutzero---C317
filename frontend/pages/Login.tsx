@@ -157,6 +157,7 @@ export default function Login() {
                     <IconButton
                       onClick={() => setShowPassword(!showPassword)}
                       edge="end"
+                      aria-label={showPassword ? 'ocultar senha' : 'mostrar senha'}
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
