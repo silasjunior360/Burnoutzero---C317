@@ -38,7 +38,7 @@ describe('Login Page', () => {
     );
 
     expect(screen.getByLabelText(/Usuário/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/Senha/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Senha/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Entrar/i })).toBeInTheDocument();
   });
 
@@ -57,7 +57,7 @@ describe('Login Page', () => {
     );
 
     fireEvent.change(screen.getByLabelText(/Usuário/i), { target: { value: 'user1' } });
-    fireEvent.change(screen.getByLabelText(/Senha/i), { target: { value: 'pass123' } });
+    fireEvent.change(screen.getByLabelText(/^Senha/), { target: { value: 'pass123' } });
     fireEvent.submit(screen.getByRole('button', { name: /Entrar/i }).closest('form')!);
 
     await waitFor(() => {
@@ -85,7 +85,7 @@ describe('Login Page', () => {
     );
 
     fireEvent.change(screen.getByLabelText(/Usuário/i), { target: { value: 'psico' } });
-    fireEvent.change(screen.getByLabelText(/Senha/i), { target: { value: 'pass' } });
+    fireEvent.change(screen.getByLabelText(/^Senha/), { target: { value: 'pass' } });
     fireEvent.submit(screen.getByRole('button', { name: /Entrar/i }).closest('form')!);
 
     await waitFor(() => {
