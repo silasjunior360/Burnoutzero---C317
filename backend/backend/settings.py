@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -64,16 +65,24 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_DB') or os.environ.get('POSTGRES_DB_NAME', 'burnout_db'),
-        'USER': os.environ.get('POSTGRES_USER') or os.environ.get('POSTGRES_DB_USER', 'burnout_user'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD') or os.environ.get('POSTGRES_DB_PASSWORD', 'burnout_pass'),
-        'HOST': os.environ.get('POSTGRES_HOST', 'postgres'),
-        'PORT': os.environ.get('POSTGRES_PORT') or os.environ.get('POSTGRES_DB_PORT', '5432'),
+if 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('POSTGRES_DB') or os.environ.get('POSTGRES_DB_NAME', 'burnout_db'),
+            'USER': os.environ.get('POSTGRES_USER') or os.environ.get('POSTGRES_DB_USER', 'burnout_user'),
+            'PASSWORD': os.environ.get('POSTGRES_PASSWORD') or os.environ.get('POSTGRES_DB_PASSWORD', 'burnout_pass'),
+            'HOST': os.environ.get('POSTGRES_HOST', 'postgres'),
+            'PORT': os.environ.get('POSTGRES_PORT') or os.environ.get('POSTGRES_DB_PORT', '5432'),
+        }
+    }
 
 
 # Password validation
