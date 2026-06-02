@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { MockedFunction } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import Psychologist from '../pages/Psychologist';
+import Psychologist from './Psychologist';
 import api from '../services/api';
 
 vi.mock('../services/api', () => ({

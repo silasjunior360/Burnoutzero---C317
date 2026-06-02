@@ -1,9 +1,9 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { expect, test, describe, vi, beforeEach } from 'vitest';
-import AIChat from '../components/AIChat/AIChat';
-import { streamAIChat } from '../services/aiApi';
+import AIChat from './AIChat';
+import { streamAIChat } from '../../services/aiApi';
 
-vi.mock('../services/aiApi', () => ({
+vi.mock('../../services/aiApi', () => ({
   streamAIChat: vi.fn(),
 }));
 

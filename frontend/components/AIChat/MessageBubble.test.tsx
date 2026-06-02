@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { expect, test, describe } from 'vitest';
-import MessageBubble from '../components/AIChat/MessageBubble';
+import MessageBubble from './MessageBubble';
 
 
 describe('MessageBubble Component', () => {

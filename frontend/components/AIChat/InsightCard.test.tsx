@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { expect, test, describe } from 'vitest';
-import InsightCard from '../components/AIChat/InsightCard';
+import InsightCard from './InsightCard';
 
 
 describe('InsightCard Component', () => {

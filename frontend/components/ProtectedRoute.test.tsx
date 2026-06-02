@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { expect, test, describe, vi, beforeEach } from 'vitest';
-import ProtectedRoute from '../components/ProtectedRoute';
+import ProtectedRoute from './ProtectedRoute';
 
 vi.mock('react-router-dom', () => ({
   Navigate: vi.fn(({ to }: any) => <div data-testid="navigate" data-to={to} />),

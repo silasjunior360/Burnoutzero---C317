@@ -7,7 +7,7 @@ const MockFuncionario = () => <div>Funcionario Dashboard</div>;
 const MockPsicologo = () => <div>Psicologo Dashboard</div>;
 const MockGestor = () => <div>Gestor Dashboard</div>;
 
-import ProtectedRoute from '../components/ProtectedRoute';
+import ProtectedRoute from './ProtectedRoute';
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {};

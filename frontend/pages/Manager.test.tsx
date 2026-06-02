@@ -2,7 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { MockedFunction } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import Manager from '../pages/Manager';
+import Manager from './Manager';
 import api from '../services/api';
 
 vi.mock('../services/api', () => ({
