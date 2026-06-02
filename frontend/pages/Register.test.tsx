@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { MockedFunction } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import Register from '../pages/Register';
+import Register from './Register';
 import api from '../services/api';
 
 const mockedUsedNavigate = vi.fn();
