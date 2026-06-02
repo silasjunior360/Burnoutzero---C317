@@ -14,7 +14,10 @@ class TestInsightService(TestCase):
     @patch('ai_engine.services.insight_service.complete')
     def test_generate_insight_success(self, mock_complete, mock_build_context):
         mock_build_context.return_value = "Mocked Context"
-        mock_complete.return_value = "[ANALISE]This is analysis.[/ANALISE]\n[RECOMENDACOES]\n- Rec 1\n- Rec 2\n[/RECOMENDACOES]"
+        mock_complete.return_value = (
+            "[ANALISE]This is analysis.[/ANALISE]\n"
+            "[RECOMENDACOES]\n- Rec 1\n- Rec 2\n[/RECOMENDACOES]"
+        )
 
         assessment = Assessment.objects.create(
             employee=self.employee,
