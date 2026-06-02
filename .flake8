@@ -1,3 +1,6 @@
 [flake8]
 extend-exclude = node_modules
 max-line-length = 120
+per-file-ignores =
+    *test_tasks.py: E402
+
