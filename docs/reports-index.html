@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BurnoutZero - Test Reports Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      --card-bg: rgba(30, 41, 59, 0.7);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #818cf8;
+      --secondary: #22d3ee;
+      --success: #34d399;
+      --glow: rgba(129, 140, 248, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      overflow-x: hidden;
+    }
+
+    .container {
+      max-width: 1100px;
+      width: 100%;
+      text-align: center;
+    }
+
+    header {
+      margin-bottom: 3.5rem;
+      animation: fadeInDown 0.8s ease-out;
+    }
+
+    .logo {
+      width: 80px;
+      height: 80px;
+      margin-bottom: 1.5rem;
+      filter: drop-shadow(0 0 15px rgba(129, 140, 248, 0.5));
+    }
+
+    h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      background: linear-gradient(to right, var(--text-main), var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+
+    .subtitle {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      font-weight: 300;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-bottom: 4rem;
+      animation: fadeInUp 1s ease-out;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 2.5rem 2rem;
+      text-align: left;
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      height: 100%;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: radial-gradient(circle at 100% 0%, var(--glow) 0%, transparent 70%);
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-8px);
+      border-color: rgba(129, 140, 248, 0.3);
+      box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.7), 0 0 30px 0 rgba(129, 140, 248, 0.05);
+    }
+
+    .card:hover::before {
+      opacity: 1;
+    }
+
+    .icon-wrapper {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      background: rgba(129, 140, 248, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      color: var(--primary);
+      font-size: 1.8rem;
+      border: 1px solid rgba(129, 140, 248, 0.15);
+      transition: transform 0.3s ease;
+    }
+
+    .card:hover .icon-wrapper {
+      transform: scale(1.1) rotate(5deg);
+      background: rgba(129, 140, 248, 0.2);
+    }
+
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      color: var(--text-main);
+    }
+
+    p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+      flex-grow: 1;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0.8rem 1.5rem;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      color: var(--text-main);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      gap: 0.5rem;
+      z-index: 2;
+    }
+
+    .btn:hover {
+      background: var(--text-main);
+      color: #0f172a;
+      box-shadow: 0 4px 12px rgba(255, 255, 255, 0.15);
+    }
+
+    .btn svg {
+      transition: transform 0.3s ease;
+    }
+
+    .btn:hover svg {
+      transform: translateX(4px);
+    }
+
+    footer {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-top: auto;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      padding-top: 2rem;
+      width: 100%;
+    }
+
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 2.2rem; }
+      body { padding: 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <img src="https://raw.githubusercontent.com/google/material-design-icons/master/png/action/verified_user/materialicons/48dp/2x/round_verified_user_black_48dp.png" alt="Shield Icon" class="logo" style="filter: invert(1) sepia(1) saturate(5) hue-rotate(200deg);">
+      <h1>BurnoutZero</h1>
+      <p class="subtitle">Continuous Integration Testing & Quality Assurance Dashboard</p>
+    </header>
+
+    <div class="grid">
+      <!-- Backend Coverage -->
+      <div class="card">
+        <div>
+          <div class="icon-wrapper">
+            📊
+          </div>
+          <h2>Backend Coverage</h2>
+          <p>Detailed statement-level test coverage report for Django APIs, insights algorithms, vector engines, and RAG retrieval databases.</p>
+        </div>
+        <a href="./backend-coverage/" class="btn">
+          View Coverage
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </a>
+      </div>
+
+      <!-- Frontend Unit -->
+      <div class="card">
+        <div>
+          <div class="icon-wrapper" style="color: var(--secondary); background: rgba(34, 211, 238, 0.1);">
+            ⚡
+          </div>
+          <h2>Frontend Unit Tests</h2>
+          <p>Vitest & React Testing Library results for state contexts, layout components, and individual page view validation rules.</p>
+        </div>
+        <a href="./frontend-unit/" class="btn">
+          View Unit Tests
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </a>
+      </div>
+
+      <!-- Playwright E2E -->
+      <div class="card">
+        <div>
+          <div class="icon-wrapper" style="color: var(--success); background: rgba(52, 211, 153, 0.1);">
+            🎭
+          </div>
+          <h2>Playwright E2E</h2>
+          <p>Comprehensive end-to-end user workflows, accessibility (A11y) checks, and visual regression snapshot test results across multiple browsers.</p>
+        </div>
+        <a href="./frontend-e2e/" class="btn">
+          View E2E Report
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </a>
+      </div>
+    </div>
+
+    <footer>
+      <p>BurnoutZero Testing Suite — Updated Automatically on Push & PR</p>
+    </footer>
+  </div>
+</body>
+</html>
