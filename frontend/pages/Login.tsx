@@ -46,10 +46,29 @@ const resolveHomeRouteFromRole = (role?: string): string => {
 export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  type GamificationProfile = {
+    xp?: number;
+    total_xp?: number;
+    pontos?: number;
+    total_points?: number;
+    diasAtivo?: number;
+    streak_days?: number;
+    level?: number;
+  };
+
+  const readCachedCurrentUser = () => {
+    try {
+      const raw = localStorage.getItem('burnout-zero-current-user');
+      return raw ? (JSON.parse(raw) as { xp?: number; pontos?: number; diasAtivo?: number; level?: number }) : {};
+    } catch {
+      return {};
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +77,8 @@ export default function Login() {
 
     try {
       const response = await api.post('/auth/login/', {
-        username: username,
+        // backend expects `username`; we allow users to enter email here
+        username: email,
         password: password
       });
       
@@ -67,6 +87,42 @@ export default function Login() {
       
       const userResponse = await api.get('/users/me/');
       const userData = userResponse.data;
+      const cachedCurrentUser = readCachedCurrentUser();
+      let gamificationProfile: GamificationProfile = {};
+      let gamificationLoaded = false;
+
+      try {
+        const gamificationResponse = await api.get('/gamification/me/');
+        gamificationProfile = gamificationResponse.data?.profile || {};
+        gamificationLoaded = true;
+      } catch {
+        gamificationProfile = {};
+      }
+
+      const cachedXp = cachedCurrentUser.xp ?? cachedCurrentUser.pontos ?? 0;
+      const cachedPoints = cachedCurrentUser.pontos ?? cachedCurrentUser.xp ?? 0;
+      const cachedDays = cachedCurrentUser.diasAtivo ?? 0;
+      const cachedLevel = cachedCurrentUser.level ?? 1;
+      const resolvedXp = gamificationLoaded ? Math.max(gamificationProfile.xp ?? gamificationProfile.total_xp ?? 0, cachedXp) : cachedXp;
+      const resolvedPoints = gamificationLoaded ? Math.max(gamificationProfile.pontos ?? gamificationProfile.total_points ?? 0, cachedPoints) : cachedPoints;
+      const resolvedDays = gamificationLoaded ? Math.max(gamificationProfile.diasAtivo ?? gamificationProfile.streak_days ?? 0, cachedDays) : cachedDays;
+      const resolvedLevel = gamificationLoaded ? Math.max(gamificationProfile.level ?? 1, cachedLevel) : cachedLevel;
+
+      localStorage.setItem(
+        'burnout-zero-current-user',
+        JSON.stringify({
+          username: userData.username || email,
+          first_name: userData.first_name || '',
+          last_name: userData.last_name || '',
+          email: userData.email || '',
+          avatar: userData.avatar || '',
+          role: userData.role || 'employee',
+          xp: resolvedXp,
+          pontos: resolvedPoints,
+          diasAtivo: resolvedDays,
+          level: resolvedLevel
+        })
+      );
       
       localStorage.setItem('user_role', userData.role || 'employee');
       
@@ -75,7 +131,7 @@ export default function Login() {
     } catch (err) {
       const axiosError = err as { response?: { status: number } };
       if (axiosError.response && axiosError.response.status === 401) {
-        setError('Usuário ou senha inválidos');
+        setError('Email ou senha inválidos');
       } else {
         setError('Ocorreu um erro ao fazer login. Tente novamente.');
       }
@@ -121,13 +177,13 @@ export default function Login() {
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label="Usuário"
-              type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               margin="normal"
               required
-              placeholder="Seu nome de usuário"
+              placeholder="seu@exemplo.com"
               InputProps={{
                 startAdornment: (
                   <InputAdornment position="start">

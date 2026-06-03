@@ -31,7 +31,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import SaveIcon from '@mui/icons-material/Save';
 import ShieldIcon from '@mui/icons-material/Shield';
 import api from '../services/api';
-import { useUser } from '../user-context';
+import { useUser } from '../use-user';
 import { useThemeMode } from '../theme-context';
 
 type ProfileForm = {
@@ -322,7 +322,7 @@ export default function Settings() {
 			}}
 		>
 			<Container maxWidth="lg">
-				<Stack spacing={1.5} sx={{ mb: 3 }}>
+				<Stack spacing={1} sx={{ mb: 3 }}>
 					<Chip
 						label="Perfil do usuário"
 						sx={{

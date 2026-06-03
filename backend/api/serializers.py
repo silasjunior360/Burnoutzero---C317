@@ -1,5 +1,7 @@
 from rest_framework import serializers
-from .models import User, Assessment, FollowUp, Appointment, Sector
+from django.utils import timezone
+from django.utils.dateparse import parse_date
+from .models import User, Assessment, FollowUp, Appointment, Sector, GamificationState
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -9,9 +11,9 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'username', 'email',
             'first_name', 'last_name',
             'avatar',
-            'role', 'department'
+            'role', 'company_code', 'department'
         ]
-        read_only_fields = ['id', 'role', 'department']
+        read_only_fields = ['id', 'role', 'department', 'company_code']
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -28,7 +30,7 @@ class UserCreateSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'password', 'email',
             'first_name', 'last_name',
-            'role', 'department'
+            'role', 'company_code', 'department'
         ]
         extra_kwargs = {'password': {'write_only': True}}
 
@@ -38,6 +40,12 @@ class UserCreateSerializer(serializers.ModelSerializer):
         if mapped_value not in valid_roles:
             raise serializers.ValidationError(f"Invalid role: {value}")
         return mapped_value
+
+    def validate_department(self, value):
+        return value.strip() if isinstance(value, str) else value
+
+    def validate_company_code(self, value):
+        return value.strip() if isinstance(value, str) else value
 
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
@@ -85,10 +93,8 @@ class SectorSerializer(serializers.ModelSerializer):
     def get_usuarios_detalhes(self, obj):
         details = []
         for user in obj.members.filter(role__in=['employee', 'psychologist']).order_by('username'):
-            assessment = self._latest_assessment(user)
             engagement = self._user_engagement(user)
             health = self._health_status(engagement)
-            latest = assessment
             details.append({
                 'id': user.id,
                 'username': user.username,
@@ -97,17 +103,57 @@ class SectorSerializer(serializers.ModelSerializer):
                 'role': user.role,
                 'engajamento': engagement if engagement is not None else 0,
                 'saude': health,
-                'alerta': bool(
-                    latest and latest.risk_level == 'high'
-                    or health == 'Ruim'
-                ),
+                'alerta': health == 'Ruim',
             })
         return details
 
     def _latest_assessment(self, user):
         return Assessment.objects.filter(employee=user).order_by('-assessment_date').first()
 
+    def _weekly_mission_score(self, user):
+        try:
+            state = user.gamification_state
+        except GamificationState.DoesNotExist:
+            return None
+
+        weekly_state = state.weekly_mission_state if isinstance(state.weekly_mission_state, dict) else {}
+        history = weekly_state.get('history') if isinstance(weekly_state, dict) else {}
+        if not isinstance(history, dict) or not history:
+            return None
+
+        score_map = {
+            'pessimo': 20,
+            'ruim': 40,
+            'neutro': 60,
+            'bom': 80,
+            'otimo': 100,
+        }
+        scores = []
+
+        ordered_history = sorted(
+            history.items(),
+            key=lambda item: parse_date(item[0]) or timezone.localdate(),
+        )
+
+        for date_key, value in ordered_history[-5:]:
+            date_value = parse_date(date_key)
+            if not date_value:
+                continue
+
+            score = score_map.get(str(value).strip().lower())
+            if score is not None:
+                scores.append(score)
+
+        if not scores:
+            return None
+
+        return round(sum(scores) / len(scores))
+
     def _user_engagement(self, user):
+        weekly_score = self._weekly_mission_score(user)
+        if weekly_score is not None:
+            return weekly_score
+
         assessment = self._latest_assessment(user)
         if not assessment:
             return None
@@ -119,7 +165,7 @@ class SectorSerializer(serializers.ModelSerializer):
             return 'Sem dados'
         if engagement > 75:
             return 'Ótimo'
-        if engagement > 30:
+        if engagement >= 30:
             return 'Bom'
         return 'Ruim'
 
@@ -140,7 +186,6 @@ class SectorSerializer(serializers.ModelSerializer):
         for user in obj.members.filter(role__in=['employee', 'psychologist']):
             engagement = self._user_engagement(user)
             health = self._health_status(engagement)
-            latest = self._latest_assessment(user)
-            if health == 'Ruim' or (latest and latest.risk_level == 'high'):
+            if health == 'Ruim':
                 count += 1
         return count

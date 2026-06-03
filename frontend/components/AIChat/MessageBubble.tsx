@@ -1,3 +1,4 @@
+
 import { Box, Paper, Typography, Avatar } from '@mui/material';
 import ReactMarkdown from 'react-markdown';
 
@@ -7,6 +8,7 @@ interface MessageBubbleProps {
 }
 
 const MessageBubble = ({ content, isUser }: MessageBubbleProps) => {
+
     return (
         <Box sx={{ display: 'flex', mb: 2, justifyContent: isUser ? 'flex-end' : 'flex-start' }}>
             {!isUser && (

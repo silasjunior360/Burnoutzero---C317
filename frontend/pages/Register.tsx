@@ -122,7 +122,8 @@ export default function Register() {
           first_name: formData.nome.split(' ')[0],
           last_name: formData.nome.split(' ').slice(1).join(' '),
           role: roleMap[formData.perfil],
-          department: formData.empresa
+          company_code: formData.empresa,
+          department: ''
         });
         
         alert('Cadastro realizado com sucesso! Faça login.');

@@ -37,8 +37,8 @@ describe('Login Page', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByLabelText(/Usuário/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Senha/)).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('seu@exemplo.com')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('••••••••')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Entrar/i })).toBeInTheDocument();
   });
 
@@ -56,8 +56,8 @@ describe('Login Page', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByLabelText(/Usuário/i), { target: { value: 'user1' } });
-    fireEvent.change(screen.getByLabelText(/^Senha/), { target: { value: 'pass123' } });
+    fireEvent.change(screen.getByPlaceholderText('seu@exemplo.com'), { target: { value: 'user1' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'pass123' } });
     fireEvent.submit(screen.getByRole('button', { name: /Entrar/i }).closest('form')!);
 
     await waitFor(() => {
@@ -84,8 +84,8 @@ describe('Login Page', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByLabelText(/Usuário/i), { target: { value: 'psico' } });
-    fireEvent.change(screen.getByLabelText(/^Senha/), { target: { value: 'pass' } });
+    fireEvent.change(screen.getByPlaceholderText('seu@exemplo.com'), { target: { value: 'psico' } });
+    fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'pass' } });
     fireEvent.submit(screen.getByRole('button', { name: /Entrar/i }).closest('form')!);
 
     await waitFor(() => {
@@ -104,11 +104,11 @@ describe('Login Page', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByLabelText(/Usuário/i), { target: { value: 'wrong' } });
+    fireEvent.change(screen.getByPlaceholderText('seu@exemplo.com'), { target: { value: 'wrong' } });
     fireEvent.submit(screen.getByRole('button', { name: /Entrar/i }).closest('form')!);
 
     await waitFor(() => {
-      expect(screen.getByText(/Usuário ou senha inválidos/i)).toBeInTheDocument();
+      expect(screen.getByText(/Email ou senha inválidos/i)).toBeInTheDocument();
     }, { timeout: 3000 });
   });
 });

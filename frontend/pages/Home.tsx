@@ -18,16 +18,14 @@ import {
   DialogActions
 } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
+import api from '../services/api';
 import {
   EmojiEvents as EmojiEventsIcon,
-  TrendingUp as TrendingUpIcon,
-  Bolt as BoltIcon,
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
   CalendarMonth as CalendarMonthIcon
 } from '@mui/icons-material';
 import ChatIcon from '@mui/icons-material/Chat';
-import api from '../services/api';
 
 import { keyframes } from '@mui/system';
 import brasaPng from '../../Icons/brasa.png';
@@ -49,6 +47,14 @@ import trofeuPng from '../../Icons/trofeu.png';
 import tsunamiPng from '../../Icons/tsunami.png';
 import ventoPng from '../../Icons/vento.png';
 
+import cascalhoPng from '../../Icons/cascalho.png';
+import bronzePng from '../../Icons/bronze.png';
+import ferroPng from '../../Icons/ferro.png';
+import ouroPng from '../../Icons/ouro.png';
+import prataPng from '../../Icons/prata.png';
+import obsidianaPng from '../../Icons/obsidiana.png';
+import diamantePng from '../../Icons/diamante.png';
+
 
 const breathIn = keyframes`
   0% { transform: scale(1); opacity: 0.6; }
@@ -60,7 +66,59 @@ const breathOut = keyframes`
   100% { transform: scale(1); opacity: 0.6; }
 `;
 
-const WORD_INTERVAL_MS = 60 * 60 * 1000;
+const FAST_TEST_MODE = false;
+const testTiming = <T extends number>(normalValue: T) => (FAST_TEST_MODE ? (1 as T) : normalValue);
+
+const getXpRequiredForNextLevel = (level: number): number => {
+  if (level <= 1) {
+    return 200;
+  }
+
+  if (level <= 9) {
+    return (level + 1) * 100;
+  }
+
+  if (level <= 19) {
+    return 1000 + ((level - 9) * 200);
+  }
+
+  if (level <= 29) {
+    return 3000 + ((level - 19) * 300);
+  }
+
+  if (level <= 39) {
+    return 6000 + ((level - 29) * 400);
+  }
+
+  return 10000 + ((level - 39) * 500);
+};
+
+const getXpTotalForLevel = (level: number) => {
+  if (level <= 1) {
+    return 0;
+  }
+
+  let totalXp = 0;
+  for (let currentLevel = 1; currentLevel < level; currentLevel += 1) {
+    totalXp += getXpRequiredForNextLevel(currentLevel);
+  }
+
+  return totalXp;
+};
+
+const getXpNextLevel = (totalXp: number) => {
+  let level = 1;
+  let currentXp = totalXp;
+
+  while (currentXp >= getXpRequiredForNextLevel(level)) {
+    currentXp -= getXpRequiredForNextLevel(level);
+    level += 1;
+  }
+
+  return getXpRequiredForNextLevel(level);
+};
+
+const WORD_INTERVAL_MS = testTiming(60 * 60 * 1000);
 const DAILY_WORDS = [
   'calma',
   'foco',
@@ -81,6 +139,19 @@ const moodOptions = [
   { label: 'Bem', icon: '🙂' },
   { label: 'Muito bem', icon: '😁' }
 ];
+
+const weeklyMissionOptions = [
+  { label: 'Péssimo', value: 'pessimo', score: 20 },
+  { label: 'Ruim', value: 'ruim', score: 40 },
+  { label: 'Neutro', value: 'neutro', score: 60 },
+  { label: 'Bom', value: 'bom', score: 80 },
+  { label: 'Ótimo', value: 'otimo', score: 100 }
+];
+
+const weeklyMissionScoreMap = weeklyMissionOptions.reduce<Record<string, number>>((accumulator, option) => {
+  accumulator[option.value] = option.score;
+  return accumulator;
+}, {});
 
 const normalizeText = (value?: string) =>
   (value || '')
@@ -120,37 +191,49 @@ const resolveHomeRouteFromUser = (userData: {
 };
 
 const AchievementIcon = ({ badge, title }: { badge?: string; title?: string }) => {
-  const key = normalizeText(title || badge);
+  const keyTitle = normalizeText(title);
+  const keyBadge = normalizeText(badge);
   const map: Record<string, { icon?: string; bg: string }> = {
     'faisca': { icon: faiscaPng, bg: '#FFF1E6' },
     'brasa semanal': { icon: isqueiroPng, bg: '#FFF3E0' },
     'chama mensal': { icon: fogueiraPng, bg: '#FFEDE0' },
-    'labareda trimestral': { icon: brasaPng, bg: '#FFE8E0' },
-    'fogareu ardente': { icon: labaredaPng, bg: '#FFE8E0' },
-    'fulgor eterno': { icon: infernoPng, bg: '#F3E8FF' },
+    'labareda trimestral': { icon: brasaPng, bg: '#ffc8b6' },
+    'fogareu ardente': { icon: labaredaPng, bg: '#fdb9b9' },
+    'fulgor eterno': { icon: infernoPng, bg: '#d7c1ee' },
 
     'gota iniciante': { icon: gotaPng, bg: '#E3F2FD' },
     'correnteza pesada': { icon: correntezaPng, bg: '#E8F6FF' },
     'rio profundo': { icon: rioPng, bg: '#E0F7FA' },
-    'oceano eterno': { icon: oceanoPng, bg: '#FFF8E1' },
-    'mare alta': { icon: tsunamiPng, bg: '#FFF4D6' },
+    'oceano eterno': { icon: oceanoPng, bg: '#c3e4f8' },
+    'mare alta': { icon: tsunamiPng, bg: '#b4defa' },
 
-    'relogio de agua': { icon: relogioPng, bg: '#FFF3E0' },
-    'sopro': { icon: soproPng, bg: '#E8F5E9' },
-    'brisa cortante': { icon: ventoPng, bg: '#F3E8FF' },
-    'pulmao de aco': { icon: pulmoesPng, bg: '#FFF0F6' },
-    'tornado celeste': { icon: tornadoPng, bg: '#FFF8E1' }
+    'relogio de agua': { icon: relogioPng, bg: '#fffaf3' },
+    'sopro': { icon: soproPng, bg: '#f4fff5' },
+    'brisa cortante': { icon: ventoPng, bg: '#d9fff4' },
+    'pulmao de aco': { icon: pulmoesPng, bg: '#bdbdbd' },
+    'tornado celeste': { icon: tornadoPng, bg: '#b6e1fd' },
+
+    'cascalho': { icon: cascalhoPng, bg: '#ECEFF1' },
+    'bronze': { icon: bronzePng, bg: '#FFD9B3' },
+    'ferro': { icon: ferroPng, bg: '#B0BEC5' },
+    'ouro': { icon: ouroPng, bg: '#FFF3B0' },
+    'prata': { icon: prataPng, bg: '#CFD8DC' },
+    'obsidiana': { icon: obsidianaPng, bg: '#919191' },
+    'diamante': { icon: diamantePng, bg: '#E1F5FE' }
+
   };
 
-  const found = map[key] ?? { icon: trofeuPng, bg: '#F5F5F5' };
+  const found = (keyBadge && map[keyBadge]) || (keyTitle && map[keyTitle]) || { icon: trofeuPng, bg: '#F5F5F5' };
+  const isGold = keyBadge === 'ouro' || keyTitle === 'ouro';
+  const imgSize = isGold ? 54 : 26;
 
   return (
-    <Box sx={{ width: 44, height: 44, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: found.bg, boxShadow: 1 }}>
+    <Box sx={{ width: 48, height: 48, borderRadius: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: found.bg, boxShadow: 1 }}>
       <Box
         component="img"
         src={found.icon}
         alt={badge || title || 'badge'}
-        sx={{ width: 26, height: 26, objectFit: 'contain' }}
+        sx={{ width: imgSize, height: imgSize, objectFit: 'contain' }}
       />
     </Box>
   );
@@ -194,6 +277,102 @@ const writeStorage = <T,>(key: string, value: T) => {
   }
 
   window.localStorage.setItem(key, JSON.stringify(value));
+  void syncStorageToBackend(key, value);
+};
+
+const seedStorage = <T,>(key: string, value: T) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  window.localStorage.setItem(key, JSON.stringify(value));
+};
+
+const getAvatarInitials = (name: string, username: string) => {
+  const parts = name.split(' ').filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+  }
+
+  if (name.trim()) {
+    return name.trim()[0].toUpperCase();
+  }
+
+  return username ? username[0].toUpperCase() : 'U';
+};
+
+const resolveAvatarSrc = (avatar?: string) => {
+  if (!avatar) {
+    return '';
+  }
+
+  if (avatar.startsWith('data:') || avatar.startsWith('http://') || avatar.startsWith('https://') || avatar.startsWith('/')) {
+    return avatar;
+  }
+
+  if (/^[A-Za-z0-9+/=]+$/.test(avatar) && avatar.length > 100) {
+    return `data:image/png;base64,${avatar}`;
+  }
+
+  return '';
+};
+
+const readCurrentUserProfile = () =>
+  readStorage<{
+    username?: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    avatar?: string;
+    role?: string;
+    nome?: string;
+    xp?: number;
+    pontos?: number;
+    diasAtivo?: number;
+    level?: number;
+  }>('burnout-zero-current-user', {});
+
+const getGamificationStorageKey = (baseKey: string) => {
+  const currentUser = readCurrentUserProfile();
+  const username = normalizeText(currentUser.username);
+
+  return username ? `${baseKey}:${username}` : baseKey;
+};
+
+const readCachedPoints = () => readStorage<number>(getGamificationStorageKey('burnout-zero-pontos'), 0);
+
+const buildDisplayName = (userData: {
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  email?: string;
+}) =>
+  [userData.first_name, userData.last_name].filter(Boolean).join(' ').trim() ||
+  userData.username ||
+  userData.email ||
+  'Usuário';
+
+const syncStorageToBackend = async (key: string, value: unknown) => {
+  const payloadMap: Record<string, string> = {
+    'burnout-zero-daily-words': 'daily_words',
+    'burnout-zero-mood-challenge': 'mood',
+    'burnout-zero-streak': 'streak',
+    'burnout-zero-water-weekly': 'water',
+    'burnout-zero-breaths': 'breathing',
+    'burnout-zero-weekly-mission': 'weekly_mission',
+  };
+
+  const baseKey = Object.keys(payloadMap).find((candidateKey) => key === candidateKey || key.startsWith(`${candidateKey}:`));
+  const payloadKey = baseKey ? payloadMap[baseKey] : undefined;
+  if (!payloadKey) {
+    return;
+  }
+
+  try {
+    await api.patch('/gamification/me/', { [payloadKey]: value });
+  } catch {
+    // keep local cache even if the backend is temporarily unavailable
+  }
 };
 
 interface BreathingPhase {
@@ -209,11 +388,15 @@ const BreathingExercise = ({ onComplete }: { onComplete: (xp: number) => void })
   const [phaseTime, setPhaseTime] = useState(0);
   const [totalTime, setTotalTime] = useState(0);
   const [cyclesCompleted, setCyclesCompleted] = useState(0);
+  const [savedCycles, setSavedCycles] = useState(() => {
+    const stored = readStorage<{ cycles?: number }>(getGamificationStorageKey('burnout-zero-breaths'), { cycles: 0 });
+    return stored.cycles ?? 0;
+  });
   const [xpAwarded, setXpAwarded] = useState(false);
-  const TOTAL_DURATION = 60;
-  const INHALE_DURATION = 4;
-  const HOLD_DURATION = 3;
-  const EXHALE_DURATION = 3;
+  const TOTAL_DURATION = testTiming(60);
+  const INHALE_DURATION = testTiming(4);
+  const HOLD_DURATION = testTiming(3);
+  const EXHALE_DURATION = testTiming(3);
   const intervalRef = useRef<number | null>(null);
 
   const phases: Record<'inhale' | 'hold' | 'exhale', BreathingPhase> = {
@@ -272,6 +455,7 @@ const BreathingExercise = ({ onComplete }: { onComplete: (xp: number) => void })
         if (currentPhase === 'exhale' && newPhaseTime >= EXHALE_DURATION) {
           setCurrentPhase('inhale');
           setCyclesCompleted((prev) => prev + 1);
+          setSavedCycles((prev) => prev + 1);
           return 0;
         }
 
@@ -282,7 +466,7 @@ const BreathingExercise = ({ onComplete }: { onComplete: (xp: number) => void })
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isActive, currentPhase, onComplete, xpAwarded]);
+  }, [EXHALE_DURATION, HOLD_DURATION, INHALE_DURATION, TOTAL_DURATION, currentPhase, isActive, onComplete, xpAwarded]);
 
   const handleStart = () => {
     setIsActive(true);
@@ -300,6 +484,14 @@ const BreathingExercise = ({ onComplete }: { onComplete: (xp: number) => void })
     setCyclesCompleted(0);
     setXpAwarded(false);
   };
+
+  useEffect(() => {
+    writeStorage(getGamificationStorageKey('burnout-zero-breaths'), {
+      cyclesCompleted,
+      cycles: savedCycles,
+      xpAwarded,
+    });
+  }, [cyclesCompleted, savedCycles, xpAwarded]);
 
   const progress = (totalTime / TOTAL_DURATION) * 100;
   const phaseProgress = (phaseTime / phases[currentPhase].duration) * 100;
@@ -343,11 +535,6 @@ const BreathingExercise = ({ onComplete }: { onComplete: (xp: number) => void })
             <Box
               sx={{
                 width: 80,
-                height: 80,
-                borderRadius: '50%',
-                bgcolor: currentPhaseInfo.color === 'primary.main' ? 'rgba(33,150,243,0.3)' : currentPhaseInfo.color === 'warning.main' ? 'rgba(255,193,7,0.3)' : 'rgba(76,175,80,0.3)',
-                border: '3px solid',
-                borderColor: currentPhaseInfo.color,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -389,8 +576,8 @@ const BreathingExercise = ({ onComplete }: { onComplete: (xp: number) => void })
   );
 };
 
-const DailyWordsMission = ({ username, onCompleteXp }: { username: string; onCompleteXp: (xp: number) => void }) => {
-  const STORAGE_KEY = `burnout-zero-daily-words-${username || 'default'}`;
+const DailyWordsMission = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void }) => {
+  const STORAGE_KEY = getGamificationStorageKey('burnout-zero-daily-words');
   
   const [state, setState] = useState(() => readStorage<{
     collectedWords: string[];
@@ -426,7 +613,7 @@ const DailyWordsMission = ({ username, onCompleteXp }: { username: string; onCom
 
   useEffect(() => {
     writeStorage(STORAGE_KEY, state);
-  }, [state]);
+  }, [STORAGE_KEY, state]);
 
 
   const handleRecordWord = () => {
@@ -505,7 +692,7 @@ const DailyWordsMission = ({ username, onCompleteXp }: { username: string; onCom
 
         {completed && (
           <Box sx={{ mt: 2, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
-            <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 600 }}>
+            <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
               ✓ Missão concluída — +75 XP
             </Typography>
           </Box>
@@ -515,8 +702,8 @@ const DailyWordsMission = ({ username, onCompleteXp }: { username: string; onCom
   );
 };
 
-const MoodChallenge = ({ username, onCompleteXp }: { username: string; onCompleteXp: (xp: number) => void }) => {
-  const STORAGE_KEY = `burnout-zero-mood-challenge-${username || 'default'}`;
+const MoodChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void }) => {
+  const STORAGE_KEY = getGamificationStorageKey('burnout-zero-mood-challenge');
   const todayKey = getLocalDateKey();
 
   const [state, setState] = useState(() => readStorage<{
@@ -534,7 +721,7 @@ const MoodChallenge = ({ username, onCompleteXp }: { username: string; onComplet
 
   useEffect(() => {
     writeStorage(STORAGE_KEY, state);
-  }, [state]);
+  }, [STORAGE_KEY, state]);
 
   const claimedToday = claimedDate === todayKey;
 
@@ -680,8 +867,121 @@ const MoodChallenge = ({ username, onCompleteXp }: { username: string; onComplet
   );
 };
 
-const StreakChallenge = ({ username, onCompleteXp }: { username: string; onCompleteXp: (xp: number) => void }) => {
-  const STORAGE_KEY = `burnout-zero-streak-${username || 'default'}`;
+const WeeklyMissionChallenge = () => {
+  const STORAGE_KEY = getGamificationStorageKey('burnout-zero-weekly-mission');
+  const todayKey = getLocalDateKey();
+
+  const [state, setState] = useState(() => readStorage<{
+    history: Record<string, string>;
+  }>(STORAGE_KEY, {
+    history: {}
+  }));
+
+  const { history } = state;
+
+  useEffect(() => {
+    writeStorage(STORAGE_KEY, state);
+  }, [STORAGE_KEY, state]);
+
+  const weekStart = new Date();
+  weekStart.setDate(weekStart.getDate() - 4);
+  weekStart.setHours(0, 0, 0, 0);
+
+  const recentEntries = Object.entries(history).filter(([dateKey]) => {
+    const date = new Date(`${dateKey}T00:00:00`);
+    return date >= weekStart;
+  });
+
+  const currentDayChoice = history[todayKey];
+  const completedDays = recentEntries.length;
+  const averagePerformance = completedDays > 0
+    ? Math.round(
+        recentEntries.reduce((sum, [, value]) => sum + (weeklyMissionScoreMap[value] || 0), 0) / completedDays
+      )
+    : 0;
+
+  const handleSelectPerformance = (value: string) => {
+    if (currentDayChoice) {
+      return;
+    }
+
+    setState((prev) => ({
+      ...prev,
+      history: {
+        ...prev.history,
+        [todayKey]: value
+      }
+    }));
+  };
+
+  return (
+    <Paper
+      variant="outlined"
+      sx={{
+        p: 2,
+        borderRadius: 2,
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1.5
+      }}
+    >
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
+        <Box>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+            Missão Semanal de Desempenho
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            Registre como foi seu dia durante 5 dias.
+          </Typography>
+        </Box>
+        <Chip label={`${completedDays}/5`} color="primary" size="small" />
+      </Box>
+
+      <LinearProgress variant="determinate" value={(completedDays / 5) * 100} sx={{ height: 8, borderRadius: 4 }} />
+
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(5, minmax(0, 1fr))' },
+          gap: 1
+        }}
+      >
+        {weeklyMissionOptions.map((option) => (
+          <Button
+            key={option.value}
+            fullWidth
+            variant={currentDayChoice === option.value ? 'contained' : 'outlined'}
+            onClick={() => handleSelectPerformance(option.value)}
+            disabled={Boolean(currentDayChoice)}
+            sx={{
+              minHeight: 72,
+              flexDirection: 'column',
+              borderRadius: 2,
+              textTransform: 'none'
+            }}
+          >
+            <Typography variant="body2" sx={{ fontWeight: 700 }}>
+              {option.label}
+            </Typography>
+          </Button>
+        ))}
+      </Box>
+
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+        <Typography variant="caption" color="text.secondary">
+          Hoje: {currentDayChoice ? weeklyMissionOptions.find((option) => option.value === currentDayChoice)?.label || 'Registrado' : 'Sem registro'}
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Desempenho médio: {averagePerformance}%
+        </Typography>
+      </Box>
+    </Paper>
+  );
+};
+
+const StreakChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void }) => {
+  const STORAGE_KEY = getGamificationStorageKey('burnout-zero-streak');
   const todayKey = getLocalDateKey();
   const yesterdayKey = getYesterdayKey();
 
@@ -699,7 +999,7 @@ const StreakChallenge = ({ username, onCompleteXp }: { username: string; onCompl
 
   useEffect(() => {
     writeStorage(STORAGE_KEY, state);
-  }, [state]);
+  }, [STORAGE_KEY, state]);
 
   const claimedToday = claimedDate === todayKey;
 
@@ -729,24 +1029,29 @@ const StreakChallenge = ({ username, onCompleteXp }: { username: string; onCompl
   );
 };
 
-const WaterChallenge = ({ username, onGainXp }: { username: string; onGainXp: (xp: number) => void }) => {
+const WaterChallenge = ({ onGainXp }: { onGainXp: (xp: number) => void }) => {
   const SIP_ML = 200;
   const TARGET_ML = 3000;
-  const COOLDOWN_MS = 15 * 60 * 1000;
+  const COOLDOWN_MS = testTiming(15 * 60 * 1000);
   
   const todayKey = getLocalDateKey();
-  const STORAGE_KEY = `burnout-zero-water-weekly-${username || 'default'}`;
+  const STORAGE_KEY = getGamificationStorageKey('burnout-zero-water-weekly');
 
-  const [totalMl, setTotalMl] = useState(() => {
-    const stored = readStorage<{ history: Record<string, number>; awardedDate?: string }>(STORAGE_KEY, {
-      history: {},
-      awardedDate: undefined
-    });
-    return stored.history?.[todayKey] ?? 0;
-  });
-
-  const [lastSipTime, setLastSipTime] = useState<number | null>(null);
-  const [waterXp, setWaterXp] = useState(0);
+  const [storedWater] = useState(() => readStorage<{
+    history: Record<string, number>;
+    totalMl?: number;
+    lastSipTime?: number | null;
+    waterXp?: number;
+  }>(STORAGE_KEY, {
+    history: {},
+    totalMl: 0,
+    lastSipTime: null,
+    waterXp: 0,
+  }));
+  const [history, setHistory] = useState<Record<string, number>>(storedWater.history || {});
+  const [totalMl, setTotalMl] = useState(() => storedWater.totalMl ?? storedWater.history?.[todayKey] ?? 0);
+  const [lastSipTime, setLastSipTime] = useState<number | null>(storedWater.lastSipTime ?? null);
+  const [waterXp, setWaterXp] = useState(storedWater.waterXp ?? 0);
   const [currentTime, setCurrentTime] = useState(() => Date.now());
 
   useEffect(() => {
@@ -761,20 +1066,15 @@ const WaterChallenge = ({ username, onGainXp }: { username: string; onGainXp: (x
 
   const canSip = totalMl < TARGET_ML && (lastSipTime === null || elapsed >= COOLDOWN_MS);
 
-  const persistToday = (ml: number) => {
-    const key = STORAGE_KEY;
-    const stored = readStorage<{ history: Record<string, number>; awardedDate?: string }>(key, { history: {}, awardedDate: undefined });
-    const today = getLocalDateKey();
-    const nextHistory = { ...(stored.history || {}) };
-    nextHistory[today] = ml;
-    writeStorage(key, { history: nextHistory, awardedDate: stored.awardedDate });
-  };
+  useEffect(() => {
+    writeStorage(STORAGE_KEY, { totalMl, lastSipTime, waterXp, history });
+  }, [STORAGE_KEY, totalMl, lastSipTime, waterXp, history]);
 
   const handleSip = () => {
     if (!canSip) return;
     setTotalMl((v) => {
       const next = Math.min(TARGET_ML, v + SIP_ML);
-      persistToday(next);
+      setHistory((prev) => ({ ...prev, [todayKey]: next }));
       return next;
     });
     setLastSipTime(Date.now());
@@ -840,17 +1140,18 @@ const WaterChallenge = ({ username, onGainXp }: { username: string; onGainXp: (x
 export default function Jornada() {
 
   const theme = useTheme();
+  const storedCurrentUser = readCurrentUserProfile();
 
   const [user, setUser] = useState({
-    nome: 'Usuário',
+    nome: storedCurrentUser.nome || buildDisplayName(storedCurrentUser),
     titulo: '',
-    avatar: '',
-    xp: 0,
-    xpProximo: 1500,
-    pontos: 0,
-    diasAtivo: 0,
-    level: 1,
-    username: ''
+    avatar: storedCurrentUser.avatar || '',
+    xp: storedCurrentUser.xp ?? storedCurrentUser.pontos ?? readCachedPoints(),
+    xpProximo: getXpNextLevel(storedCurrentUser.xp ?? storedCurrentUser.pontos ?? readCachedPoints()),
+    pontos: storedCurrentUser.pontos ?? storedCurrentUser.xp ?? readCachedPoints(),
+    diasAtivo: storedCurrentUser.diasAtivo ?? 0,
+    level: storedCurrentUser.level ?? 1,
+    username: storedCurrentUser.username || ''
   });
 
   const [totalXp, setTotalXp] = useState(0);
@@ -858,13 +1159,14 @@ export default function Jornada() {
   const [selectedConquestIndex, setSelectedConquestIndex] = useState<number | null>(null);
   const [openRewards, setOpenRewards] = useState(false);
   const [openObtainedConquests, setOpenObtainedConquests] = useState(false);
+  const [isProfileHydrated, setIsProfileHydrated] = useState(false);
 
-  const [userTiers, setUserTiers] = useState<{ consistency: number; hydration: number; breathing: number }>({ consistency: -1, hydration: -1, breathing: -1 });
+  const [userTiers, setUserTiers] = useState<{ consistency: number; hydration: number; breathing: number; level: number }>({ consistency: -1, hydration: -1, breathing: -1, level: -1 });
 
   useEffect(() => {
     if (!openRewards) return;
 
-    const streakStore = readStorage<{ streakDays?: number }>(`burnout-zero-streak-${user.username || 'default'}`, { streakDays: 0 });
+    const streakStore = readStorage<{ streakDays?: number }>(getGamificationStorageKey('burnout-zero-streak'), { streakDays: 0 });
     const streakDays = streakStore.streakDays ?? 0;
     let consistencyTier = -1;
     if (streakDays >= 365) consistencyTier = 4; 
@@ -873,7 +1175,7 @@ export default function Jornada() {
     else if (streakDays >= 7) consistencyTier = 1;
     else if (streakDays >= 1) consistencyTier = 0;
 
-    const waterStore = readStorage<{ history: Record<string, number> }>(`burnout-zero-water-weekly-${user.username || 'default'}`, { history: {} });
+    const waterStore = readStorage<{ history: Record<string, number> }>(getGamificationStorageKey('burnout-zero-water-weekly'), { history: {} });
     const hist = waterStore.history || {};
     const dayValues = Object.values(hist || {});
     const daysWith2L = dayValues.filter((v) => v >= 2000).length;
@@ -885,62 +1187,158 @@ export default function Jornada() {
     else if (daysWith2L >= 10) hydrationTier = 1;
     else if (daysWith1L >= 1) hydrationTier = 0;
 
-    const breathStore = readStorage<{ cycles?: number }>('burnout-zero-breaths', { cycles: 0 });
+    const breathStore = readStorage<{ cycles?: number }>(getGamificationStorageKey('burnout-zero-breaths'), { cycles: 0 });
     const cycles = breathStore.cycles ?? 0;
     let breathingTier = -1;
     if (cycles >= 500) breathingTier = 2;
     else if (cycles >= 100) breathingTier = 1;
     else if (cycles >= 1) breathingTier = 0;
 
-    setUserTiers({ consistency: consistencyTier, hydration: hydrationTier, breathing: breathingTier });
-  }, [openRewards]);
+    let levelTier = -1;
+    const currentLevel = user.level || 1;
+    if (currentLevel >= 100) levelTier = 6;
+    else if (currentLevel >= 75) levelTier = 5;
+    else if (currentLevel >= 50) levelTier = 4;
+    else if (currentLevel >= 25) levelTier = 3;
+    else if (currentLevel >= 15) levelTier = 2;
+    else if (currentLevel >= 10) levelTier = 1;
+    else if (currentLevel >= 1) levelTier = 0;
+
+    setUserTiers({ consistency: consistencyTier, hydration: hydrationTier, breathing: breathingTier, level: levelTier });
+  }, [openRewards, user.level]);
 
   // fetch profile and sync basic stats on mount
   useEffect(() => {
     let mounted = true;
-
-    const loadUserProfile = async () => {
-      try {
-        const [profileRes, pointsRes] = await Promise.all([
-          api.get('/users/me/'),
-          api.get('/gamification/my-points/'),
-        ]);
-
+    Promise.all([api.get('/users/me/'), api.get('/gamification/me/')])
+      .then(([userRes, gamificationRes]) => {
         if (!mounted) return;
 
-        const data = profileRes.data || {};
-        const pointsData = pointsRes.data || {};
+        const data = userRes.data || {};
+        const gamification = gamificationRes.data || {};
+        setBackRoute(resolveHomeRouteFromUser(data));
 
-        const nome = [data.first_name, data.last_name].filter(Boolean).join(' ') || data.username || data.email || 'Usuário';
-        const avatar =
-          data.avatar ||
-          ((data.first_name ? data.first_name[0] : data.username ? data.username[0] : 'U') +
-            (data.last_name ? data.last_name[0] : ''));
-        const pontos = typeof pointsData.total_pontos === 'number' ? pointsData.total_pontos : (typeof pointsData.total_points === 'number' ? pointsData.total_points : 0);
-
-        const profile = {
-          nome,
-          titulo: data.role || data.tipo || data.user_type || data.tipo_usuario || data.profile_type || '',
-          avatar,
-          xp: pontos,
-          xpProximo: data.xp_proximo ?? 1500,
-          pontos,
-          diasAtivo: data.dias_ativo ?? readStorage<{ streakDays?: number }>(`burnout-zero-streak-${data.username || 'default'}`, { streakDays: 0 }).streakDays ?? 0,
-          level: data.level ?? 1,
-          username: data.username || '',
+        const username = data.username || storedCurrentUser.username || '';
+        const profileData = gamification.profile || {};
+        const profile: {
+          nome: string;
+          titulo: string;
+          avatar: string;
+          xp: number;
+          xpProximo: number;
+          pontos: number;
+          diasAtivo: number;
+          level: number;
+          username: string;
+        } = {
+          nome: profileData.nome || buildDisplayName(data),
+          titulo: '',
+          avatar: data.avatar || profileData.avatar || '',
+          xp: Math.max(
+            storedCurrentUser.xp ?? 0,
+            storedCurrentUser.pontos ?? 0,
+            profileData.xp ?? profileData.total_xp ?? 0
+          ),
+          xpProximo: profileData.xpProximo ?? 1500,
+          pontos: Math.max(
+            storedCurrentUser.pontos ?? 0,
+            storedCurrentUser.xp ?? 0,
+            profileData.pontos ?? profileData.total_points ?? 0
+          ),
+          diasAtivo: profileData.diasAtivo ?? storedCurrentUser.diasAtivo ?? 0,
+          level: profileData.level ?? storedCurrentUser.level ?? 1,
+          username
         };
 
-        setBackRoute(resolveHomeRouteFromUser(data));
-        setUser(profile);
-        setTotalXp(pontos);
-      } catch (error) {
-        console.error('Erro ao carregar perfil:', error);
-      }
-    };
+        if (gamification.storage) {
+          Object.entries(gamification.storage as Record<string, unknown>).forEach(([key, value]) => {
+            seedStorage(getGamificationStorageKey(key), value);
+          });
+        }
 
-    void loadUserProfile();
+        if (gamification.reward_tiers) {
+          setUserTiers(gamification.reward_tiers);
+        }
+
+        setUser(profile);
+        setTotalXp(profile.xp);
+        setIsProfileHydrated(true);
+
+        writeStorage('burnout-zero-current-user', {
+          username: profile.username,
+          nome: profile.nome,
+          first_name: data.first_name || '',
+          last_name: data.last_name || '',
+          email: data.email || '',
+          avatar: profile.avatar,
+          role: data.role || 'employee',
+          xp: profile.xp,
+          pontos: profile.pontos,
+          diasAtivo: profile.diasAtivo,
+          level: profile.level
+        });
+      })
+      .catch(() => {
+        // ignore - keep defaults when the API is unavailable
+        setIsProfileHydrated(true);
+      });
 
     return () => { mounted = false; };
+  }, [
+    storedCurrentUser.avatar,
+    storedCurrentUser.diasAtivo,
+    storedCurrentUser.email,
+    storedCurrentUser.first_name,
+    storedCurrentUser.last_name,
+    storedCurrentUser.level,
+    storedCurrentUser.nome,
+    storedCurrentUser.pontos,
+    storedCurrentUser.role,
+    storedCurrentUser.username,
+    storedCurrentUser.xp,
+  ]);
+
+  useEffect(() => {
+    const handleUserProfileUpdated = (event: Event) => {
+      const customEvent = event as CustomEvent<{
+        avatar?: string;
+        name?: string;
+        username?: string;
+        first_name?: string;
+        last_name?: string;
+      }>;
+
+      setUser((current) => {
+        const nextAvatar = customEvent.detail?.avatar ?? current.avatar;
+        const nextName = customEvent.detail?.name ?? current.nome;
+        const nextUsername = customEvent.detail?.username || current.username;
+        const nextUser = {
+          ...current,
+          avatar: nextAvatar,
+          nome: nextName,
+          username: nextUsername
+        };
+
+        writeStorage('burnout-zero-current-user', {
+          username: nextUsername,
+          nome: nextName,
+          first_name: customEvent.detail?.first_name || '',
+          last_name: customEvent.detail?.last_name || '',
+          email: '',
+          avatar: nextAvatar,
+          role: 'employee',
+          xp: nextUser.xp,
+          pontos: nextUser.pontos,
+          diasAtivo: nextUser.diasAtivo,
+          level: nextUser.level
+        });
+
+        return nextUser;
+      });
+    };
+
+    window.addEventListener('user-profile-updated', handleUserProfileUpdated);
+    return () => window.removeEventListener('user-profile-updated', handleUserProfileUpdated);
   }, []);
   const navigate = useNavigate();
   const [tabValue, setTabValue] = useState('home');
@@ -948,27 +1346,67 @@ export default function Jornada() {
   const [isWeeklyExpanded, setIsWeeklyExpanded] = useState(true);
   const [isConquestExpanded, setIsConquestExpanded] = useState(true);
 
-  const handleGainXp = async (xp: number) => {
-    setTotalXp((prev) => prev + xp);
+  const currentLevelXp = Math.max(0, totalXp - getXpTotalForLevel(user.level));
+  const currentLevelRequirement = Math.max(1, user.xpProximo);
+  const currentLevelProgress = Math.min(100, (currentLevelXp / currentLevelRequirement) * 100);
+
+  useEffect(() => {
+    if (!isProfileHydrated) {
+      return;
+    }
+
+    writeStorage(getGamificationStorageKey('burnout-zero-pontos'), user.pontos);
+    writeStorage('burnout-zero-current-user', {
+      username: user.username,
+      nome: user.nome,
+      first_name: user.nome.split(' ')[0] || '',
+      last_name: user.nome.split(' ').slice(1).join(' '),
+      email: storedCurrentUser.email || '',
+      avatar: user.avatar,
+      role: storedCurrentUser.role || 'employee',
+      xp: user.xp,
+      pontos: user.pontos,
+      diasAtivo: user.diasAtivo,
+      level: user.level
+    });
+
+    void api.patch('/gamification/me/', {
+      xp: user.xp,
+      pontos: user.pontos,
+      diasAtivo: user.diasAtivo,
+      level: user.level
+    }).catch(() => {
+      // keep local cache if the backend sync fails temporarily
+    });
+  }, [isProfileHydrated, storedCurrentUser.email, storedCurrentUser.role, user.avatar, user.diasAtivo, user.level, user.nome, user.pontos, user.username, user.xp]);
+
+  const handleGainXp = (xp: number) => {
     setUser((prev) => {
       const next = {
         ...prev,
         xp: (prev.xp || 0) + xp,
         pontos: (prev.pontos || 0) + xp
       };
-      try {
-        writeStorage('burnout-zero-pontos', next.pontos);
-      } catch {
-        // ignore write storage errors
-      }
+      setTotalXp(next.xp);
       return next;
     });
-
-    try {
-      await api.post('/gamification/my-points/', { points: xp, reason: 'streak_bonus' });
-    } catch (err) {
-      console.error('Erro ao salvar pontos no backend:', err);
-    }
+    void api.post('/gamification/me/award/', { points: xp, reason: 'assessment_complete' })
+      .then((response) => {
+        const profile = response.data?.profile || {};
+        setUser((current) => ({
+          ...current,
+          xp: profile.xp ?? profile.total_xp ?? current.xp,
+          pontos: profile.pontos ?? profile.total_points ?? current.pontos,
+          diasAtivo: profile.diasAtivo ?? profile.streak_days ?? current.diasAtivo,
+          level: profile.level ?? current.level
+        }));
+        if (profile.xp ?? profile.total_xp) {
+          setTotalXp(profile.xp ?? profile.total_xp);
+        }
+      })
+      .catch(() => {
+        // keep the optimistic UI state even if the backend request fails temporarily
+      });
   };
 
   const conquistas = [
@@ -1008,7 +1446,20 @@ export default function Jornada() {
         { titulo: 'Sopro', requisito: 'Fazer 1 ciclo de respiração', xp: 30, badge: 'sopro' },
         { titulo: 'Brisa Cortante', requisito: 'Fazer 100 ciclos de respiração', xp: 400, badge: 'brisa' },
         { titulo: 'Pulmão de aço', requisito: 'Fazer 500 ciclos', xp: 1500, badge: 'pulmão aço' },
-        { titulo: 'Tornado Celeste', requisito: 'Fazer 1000 ciclos', xp: 100, badge: 'tornado' }
+        { titulo: 'Tornado Celeste', requisito: 'Fazer 1000 ciclos', xp: 5000, badge: 'tornado' }
+      ]
+    },
+    {
+      key: 'level',
+      category: 'Progressão de Nível',
+      achievements: [
+        { titulo: 'Cascalho', requisito: 'Alcançar o Nível 1', xp: 50, badge: 'cascalho' },
+        { titulo: 'Bronze Amassado', requisito: 'Alcançar o Nível 10', xp: 150, badge: 'bronze' },
+        { titulo: 'Ferro Forjado', requisito: 'Alcançar o Nível 15', xp: 300, badge: 'ferro' },
+        { titulo: 'Pepita de Prata', requisito: 'Alcançar o Nível 25', xp: 500, badge: 'prata' },
+        { titulo: 'Cavalheiro de Ouro', requisito: 'Alcançar o Nível 50', xp: 1200, badge: 'ouro' },
+        { titulo: 'Coração de Obsidiana', requisito: 'Alcançar o Nível 75', xp: 5000, badge: 'obsidiana' },
+        { titulo: 'Cristal de Diamante', requisito: 'Alcançar o Nível 100', xp: 10000, badge: 'diamante' },
       ]
     }
   ];
@@ -1016,10 +1467,14 @@ export default function Jornada() {
   const obtainedAchievements = achievementCategories
     .flatMap((category) =>
       category.achievements.map((achievement, index) => {
-        const activeTier =
-          (category.key === 'consistency' && userTiers.consistency === index) ||
-          (category.key === 'hydration' && userTiers.hydration === index) ||
-          (category.key === 'breathing' && userTiers.breathing === index);
+        const currentTier =
+          category.key === 'consistency'
+            ? userTiers.consistency
+            : category.key === 'hydration'
+              ? userTiers.hydration
+              : category.key === 'breathing'
+                ? userTiers.breathing
+                : userTiers.level;
 
         return {
           category: category.category,
@@ -1027,16 +1482,16 @@ export default function Jornada() {
           requisito: achievement.requisito,
           xp: achievement.xp,
           badge: achievement.badge,
-          obtained: activeTier
+          obtained: currentTier >= index && currentTier >= 0
         };
       })
     )
     .filter((achievement) => achievement.obtained);
 
   const WeeklyHydrationChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void }) => {
-    const STORAGE_KEY = `burnout-zero-water-weekly-${user.username || 'default'}`;
+    const STORAGE_KEY = getGamificationStorageKey('burnout-zero-water-weekly');
     const TARGET_DAILY_ML = 2000;
-    const TARGET_DAYS = 5;
+    const TARGET_DAYS = FAST_TEST_MODE ? 1 : 5;
     const [history, setHistory] = useState<Record<string, number>>({});
     const [awardedDate, setAwardedDate] = useState<string | undefined>(undefined);
 
@@ -1044,7 +1499,7 @@ export default function Jornada() {
       const stored = readStorage<{ history: Record<string, number>; awardedDate?: string }>(STORAGE_KEY, { history: {}, awardedDate: undefined });
       setHistory(stored.history || {});
       setAwardedDate(stored.awardedDate);
-    }, []);
+    }, [STORAGE_KEY]);
 
     const getLast7DaysCount = () => {
       const keys = Object.keys(history);
@@ -1073,7 +1528,7 @@ export default function Jornada() {
           setAwardedDate(today);
         }
       }
-    }, [weeklyCount, awardedDate, history, onCompleteXp]);
+    }, [STORAGE_KEY, TARGET_DAYS, weeklyCount, awardedDate, history, onCompleteXp]);
 
     const progress = Math.min(100, (weeklyCount / TARGET_DAYS) * 100);
 
@@ -1083,21 +1538,14 @@ export default function Jornada() {
         sx={{
           p: 2,
           borderRadius: 2,
-          bgcolor: 'background.paper',
           height: '100%',
           display: 'flex',
           flexDirection: 'column'
         }}
       >
         <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-          Hidratação consistente
-        </Typography>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-          <BoltIcon sx={{ fontSize: 16, color: 'warning.main' }} />
-          <Typography variant="caption" color="warning.main">
             +250 XP (Beber 2L/dia por 5 dias)
           </Typography>
-        </Box>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 1 }}>
           <Box sx={{ flex: 1 }}>
             <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: 4 }} />
@@ -1179,38 +1627,33 @@ export default function Jornada() {
           </Button>
         </Box>
       </Box>
-
       <Grid container spacing={3}>
-        {/* Coluna principal (esquerda) */}
         <Grid size={{ xs: 12, md: 8 }}>
-          {/* Desafios Diários: Respiração + Água */}
-            <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
-              <Box sx={{ bgcolor: 'primary.main', px: 3, py: 2, color: 'white' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Desafios Diários
-                  </Typography>
-                  <Button
-                    size="small"
-                    onClick={() => setIsDailyExpanded(!isDailyExpanded)}
-                    sx={{ color: 'white' }}
-                    endIcon={isDailyExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                  >
-                  </Button>
-                </Box>
+          <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
+            <Box sx={{ bgcolor: 'primary.main', px: 3, py: 2, color: 'white' }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                  Desafios Diários
+                </Typography>
+                <Button
+                  size="small"
+                  onClick={() => setIsDailyExpanded(!isDailyExpanded)}
+                  sx={{ color: 'white' }}
+                  endIcon={isDailyExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                />
               </Box>
-              {isDailyExpanded && (
-                <CardContent>
-                  <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                    <BreathingExercise onComplete={handleGainXp} />
-                    <WaterChallenge key={`water-${user.username}`} username={user.username} onGainXp={handleGainXp} />
-                    <DailyWordsMission key={`words-${user.username}`} username={user.username} onCompleteXp={handleGainXp} />
-                  </Box>
-                </CardContent>
-              )}
-            </Card>
+            </Box>
+            {isDailyExpanded && (
+              <CardContent>
+                <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                  <BreathingExercise onComplete={handleGainXp} />
+                  <WaterChallenge onGainXp={handleGainXp} />
+                  <DailyWordsMission onCompleteXp={handleGainXp} />
+                </Box>
+              </CardContent>
+            )}
+          </Card>
 
-          {/* Desafios Semanais */}
           <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden', bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider' }}>
             <Box sx={{ bgcolor: 'primary.main', px: 3, py: 2, color: 'white' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1222,8 +1665,7 @@ export default function Jornada() {
                   onClick={() => setIsWeeklyExpanded(!isWeeklyExpanded)}
                   sx={{ color: 'white' }}
                   endIcon={isWeeklyExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                >
-                </Button>
+                />
               </Box>
             </Box>
             {isWeeklyExpanded && (
@@ -1234,37 +1676,18 @@ export default function Jornada() {
                   </Grid>
                   <Grid size={{ xs: 12 }}>
                     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                      <MoodChallenge key={`mood-${user.username}`} username={user.username} onCompleteXp={handleGainXp} />
+                      <MoodChallenge key={`mood-${user.username}`} onCompleteXp={handleGainXp} />
                     </Box>
+                  </Grid>
+                  <Grid size={{ xs: 12 }}>
+                    <WeeklyMissionChallenge />
                   </Grid>
                 </Grid>
               </CardContent>
             )}
           </Card>
 
-          {/* Seu equilíbrio semanal */}
-          <Card sx={{ borderRadius: 2, bgcolor: theme.palette.mode === 'dark' ? 'rgba(20, 125, 172, 0.18)' : 'success.light', color: theme.palette.mode === 'dark' ? 'text.primary' : 'white', border: '1px solid', borderColor: 'divider' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <TrendingUpIcon sx={{ fontSize: 40 }} />
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="h6">Seu equilíbrio semanal</Typography>
-                  <Typography variant="body2">
-                    Você está 15% mais calmo que na semana passada. Continue assim!
-                  </Typography>
-                </Box>
-                <Button
-                  variant="contained"
-                  sx={{ bgcolor: theme.palette.mode === 'dark' ? 'background.paper' : 'white', color: 'success.main' }}
-                >
-                  ELOGIOS FEITOS
-                </Button>
-                <Typography variant="h4" sx={{ fontWeight: 700 }}>
-                  12
-                </Typography>
-              </Box>
-            </CardContent>
-          </Card>
+          
         </Grid>
 
         {/* Coluna lateral (direita) */}
@@ -1281,30 +1704,28 @@ export default function Jornada() {
                   mx: 'auto',
                   mb: 2
                 }}
+                src={resolveAvatarSrc(user.avatar) || undefined}
+                alt={user.nome}
               >
-                {user.avatar}
+                {getAvatarInitials(user.nome, user.username)}
               </Avatar>
               <Typography variant="h5" sx={{ fontWeight: 600 }}>
                 {user.nome}
               </Typography>
-              <Chip
-                label={user.titulo}
-                size="small"
-                sx={{ mt: 1, mb: 2 }}
-              />
+              
               <Divider sx={{ my: 2 }} />
               <Box sx={{ mb: 2 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
                   <Typography variant="body2" color="text.secondary">XP atual:</Typography>
-                  <Typography variant="body2" fontWeight={600}>{totalXp} / {user.xpProximo}</Typography>
+                  <Typography variant="body2" fontWeight={600}>{currentLevelXp} / {currentLevelRequirement}</Typography>
                 </Box>
                 <LinearProgress
                   variant="determinate"
-                  value={Math.min(100, (totalXp / user.xpProximo) * 100)}
+                  value={currentLevelProgress}
                   sx={{ height: 8, borderRadius: 2 }}
                 />
                 <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                  Próximo Nível: {user.xpProximo}
+                  Próximo Nível: {user.level + 1}
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 2, gap: 1 }}>
@@ -1335,7 +1756,7 @@ export default function Jornada() {
             <Box sx={{ bgcolor: 'primary.main', px: 3, py: 2, color: 'white' }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                  Conquistas Recentes
+                  Streak diário
                 </Typography>
                 <Button
                   size="small"
@@ -1385,9 +1806,7 @@ export default function Jornada() {
                             }}>
                               <AchievementIcon badge={found?.badge} title={conquista.titulo} />
                             </Box>
-                            <Typography variant="caption" color="text.secondary">
-                              Clique para ver
-                            </Typography>
+                            
                           </Box>
                         );
                       })()}
@@ -1396,8 +1815,8 @@ export default function Jornada() {
                 ))}
               </Grid>
               {selectedConquestIndex !== null && (
-                <Box sx={{ mt: 2, p: 2, borderRadius: 1, bgcolor: 'success.light' }}>
-                  <Typography variant="subtitle2" sx={{ fontWeight: 600, color: 'white' }}>
+                <Box sx={{ mt: 2, p: 2, borderRadius: 1 }}>
+                  <Typography variant="subtitle2" sx={{ fontWeight: 600 }}>
                     {conquistas[selectedConquestIndex].titulo}
                   </Typography>
                   <Typography variant="caption" color="success.dark">
@@ -1405,7 +1824,7 @@ export default function Jornada() {
                   </Typography>
                 </Box>
               )}
-              <StreakChallenge key={`streak-${user.username}`} username={user.username} onCompleteXp={handleGainXp} />
+              <StreakChallenge key={`streak-${user.username}`} onCompleteXp={handleGainXp} />
               <Button
                 fullWidth
                 variant="outlined"
@@ -1415,9 +1834,7 @@ export default function Jornada() {
               >
                 Conquistas obtidas
               </Button>
-              <Typography variant="caption" color="text.secondary" align="center" display="block" sx={{ mt: 1 }}>
-                Veja as conquistas já desbloqueadas pelo seu progresso
-              </Typography>
+              
             </CardContent>
             )}
           </Card>
@@ -1450,8 +1867,8 @@ export default function Jornada() {
                               </Box>
                               <Box sx={{ textAlign: 'right' }}>
                                 <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>{ach.xp} XP</Typography>
-                                {((cat.key === 'consistency' && userTiers.consistency === ai) || (cat.key === 'hydration' && userTiers.hydration === ai) || (cat.key === 'breathing' && userTiers.breathing === ai)) && (
-                                  <Chip label="Ativo" color="success" size="small" sx={{ mt: 1 }} />
+                                {((cat.key === 'consistency' && userTiers.consistency === ai) || (cat.key === 'hydration' && userTiers.hydration === ai) || (cat.key === 'breathing' && userTiers.breathing === ai) || (cat.key === 'level' && userTiers.level === ai)) && (
+                                  <Chip label="Realizada" color="success" size="small" sx={{ mt: 1 }} />
                                 )}
                               </Box>
                             </Paper>

@@ -87,7 +87,7 @@ test.describe('Authentication & Landing Page E2E', () => {
 
     await page.goto('/login');
 
-    await page.fill('input[placeholder="Seu nome de usuário"]', 'johndoe');
+    await page.fill('input[placeholder="seu@exemplo.com"]', 'johndoe@example.com');
     await page.fill('input[placeholder="••••••••"]', 'password123');
     await page.click('button:has-text("Entrar")');
 
@@ -112,7 +112,7 @@ test.describe('Authentication & Landing Page E2E', () => {
 
     await page.goto('/login');
 
-    await page.fill('input[placeholder="Seu nome de usuário"]', 'managerjohndoe');
+    await page.fill('input[placeholder="seu@exemplo.com"]', 'manager@example.com');
     await page.fill('input[placeholder="••••••••"]', 'password123');
     await page.click('button:has-text("Entrar")');
 
@@ -137,7 +137,7 @@ test.describe('Authentication & Landing Page E2E', () => {
 
     await page.goto('/login');
 
-    await page.fill('input[placeholder="Seu nome de usuário"]', 'psyjohndoe');
+    await page.fill('input[placeholder="seu@exemplo.com"]', 'psyjohndoe@example.com');
     await page.fill('input[placeholder="••••••••"]', 'password123');
     await page.click('button:has-text("Entrar")');
 

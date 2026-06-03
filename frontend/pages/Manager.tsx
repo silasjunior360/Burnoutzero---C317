@@ -84,21 +84,49 @@ export default function Manager() {
   const [activeAlertsExpanded, setActiveAlertsExpanded] = useState(false);
   const [metricasSetores, setMetricasSetores] = useState<SetorMetric[]>([]);
 
-  useEffect(() => {
-    Promise.all([
+  const loadDashboardData = async () => {
+    const [dashboardRes, sectorsRes] = await Promise.all([
       api.get('/manager/team-overview/'),
       api.get('/manager/sectors/')
-    ])
-      .then(([dashboardRes, sectorsRes]) => {
-        setDashboardData(dashboardRes.data);
-        setMetricasSetores(normalizeSetores(sectorsRes.data));
-      })
-      .catch((err) => console.error(err));
+    ]);
+
+    return {
+      dashboardData: dashboardRes.data as DashboardData,
+      sectors: normalizeSetores(sectorsRes.data)
+    };
+  };
+
+  const applyDashboardData = (data: { dashboardData: DashboardData; sectors: SetorMetric[] }) => {
+    setDashboardData(data.dashboardData);
+    setMetricasSetores(data.sectors);
+  };
+
+  const refreshDashboard = async () => {
+    const data = await loadDashboardData();
+    applyDashboardData(data);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const data = await loadDashboardData();
+        if (!cancelled) {
+          applyDashboardData(data);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const refreshSectors = async () => {
-    const response = await api.get('/manager/sectors/');
-    setMetricasSetores(normalizeSetores(response.data));
+    await refreshDashboard();
   };
 
   const alerts = dashboardData?.recent_alerts || [];
@@ -120,10 +148,15 @@ export default function Manager() {
       return;
     }
 
-    await api.post('/manager/sectors/', { setor: nome });
-    await refreshSectors();
-    setNovoSetor('');
-    setCreateSectorDialogOpen(false);
+    try {
+      await api.post('/manager/sectors/', { setor: nome });
+      await refreshDashboard();
+      setNovoSetor('');
+      setCreateSectorDialogOpen(false);
+      setActiveSectorTab('sectors');
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const handleOpenCreateSectorDialog = () => {
@@ -249,7 +282,7 @@ export default function Manager() {
             <CardContent sx={{ textAlign: 'center' }}>
               <TrendingUpIcon sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
               <Typography variant="h4">{averageSectorPerformance}%</Typography>
-              <Typography color="text.secondary">Desempenho Médio</Typography>
+              <Typography color="text.secondary">Desempenho Semanal Médio</Typography>
             </CardContent>
           </Card>
         </Grid>
@@ -284,16 +317,7 @@ export default function Manager() {
               <WarningIcon sx={{ fontSize: 40, color: 'warning.main', mb: 1 }} />
               <Typography variant="h4">{activeAlertsDisplayCount}</Typography>
               <Typography color="text.secondary">Alertas Ativos</Typography>
-              {alerts.length > 0 && (
-                <Box sx={{ mt: 1.5, textAlign: 'left' }}>
-                  <Typography variant="body2" sx={{ fontWeight: 700 }}>
-                    {alerts[0].employee__username}
-                  </Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    Avaliação de alto risco identificada
-                  </Typography>
-                </Box>
-              )}
+              
             </CardContent>
             <Collapse in={activeAlertsExpanded} timeout="auto" unmountOnExit>
               <Box sx={{ px: 2, pb: 2, textAlign: 'left' }}>
@@ -449,7 +473,7 @@ export default function Manager() {
                     <TableRow>
                       <TableCell width={60}>Excluir</TableCell>
                       <TableCell>Setor</TableCell>
-                      <TableCell>Desempenho</TableCell>
+                      <TableCell>Desempenho Semanal</TableCell>
                       <TableCell>Status</TableCell>
                       <TableCell>Alertas</TableCell>
                     </TableRow>

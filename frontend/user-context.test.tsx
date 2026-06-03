@@ -1,7 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { expect, test, describe, vi, beforeEach } from 'vitest';
 import type { MockedFunction } from 'vitest';
-import { UserProvider, useUser } from './user-context';
+import { UserProvider } from './user-context';
+import { useUser } from './use-user';
 import api from './services/api';
 
 vi.mock('./services/api', () => ({

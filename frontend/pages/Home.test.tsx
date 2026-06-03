@@ -3,6 +3,18 @@ import { expect, test, describe, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Home from './Home';
 
+vi.mock('../services/api', () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+    patch: vi.fn(),
+  },
+}));
+
+import api from '../services/api';
+
+const mockedApi = vi.mocked(api, { deep: true });
+
 const localStorageMock = (() => {
   let store: Record<string, string> = {};
   return {
@@ -28,6 +40,81 @@ describe('Home (Jornada) Interactive Components', () => {
     localStorageMock.clear();
     vi.clearAllMocks();
     vi.useFakeTimers();
+
+    mockedApi.get.mockImplementation((url: string) => {
+      if (url === '/users/me/') {
+        return Promise.resolve({
+          data: {
+            first_name: 'Ana',
+            last_name: 'Silva',
+            username: 'ana',
+            role: 'employee',
+          },
+        });
+      }
+
+      if (url === '/gamification/me/') {
+        return Promise.resolve({
+          data: {
+            profile: {
+              nome: 'Ana Silva',
+              avatar: 'AS',
+              xp: 0,
+              xpProximo: 1500,
+              pontos: 0,
+              diasAtivo: 0,
+              level: 1,
+            },
+            storage: {
+              'burnout-zero-daily-words': {
+                collectedWords: [],
+                currentWord: null,
+                nextWordAt: 0,
+                completed: false,
+                xpAwarded: false,
+              },
+              'burnout-zero-mood-challenge': {
+                selectedMood: null,
+                claimedDate: null,
+                history: [],
+              },
+              'burnout-zero-streak': {
+                streakDays: 0,
+                lastClaimDate: null,
+                claimedDate: null,
+              },
+              'burnout-zero-water-weekly': {
+                totalMl: 0,
+                lastSipTime: null,
+                waterXp: 0,
+                history: {},
+              },
+              'burnout-zero-breaths': {
+                cyclesCompleted: 0,
+                cycles: 0,
+                totalTime: 0,
+                phaseTime: 0,
+                currentPhase: 'inhale',
+                xpAwarded: false,
+              },
+              'burnout-zero-pontos': 0,
+            },
+            reward_tiers: {
+              consistency: -1,
+              hydration: -1,
+              breathing: -1,
+            },
+            earned_achievements: [],
+            points_history: [],
+          },
+        });
+      }
+
+      return Promise.resolve({ data: {} });
+    });
+
+    mockedApi.post.mockResolvedValue({ data: {} });
+    mockedApi.patch.mockResolvedValue({ data: {} });
   });
 
   const renderHome = () =>

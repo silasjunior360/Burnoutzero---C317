@@ -12,6 +12,9 @@ class User(AbstractUser):
     role = models.CharField(
         max_length=20, choices=ROLE_CHOICES, default='employee'
     )
+    company_code = models.CharField(
+        max_length=100, blank=True, default=''
+    )
     department = models.CharField(
         max_length=100, blank=True, null=True
     )
@@ -35,6 +38,7 @@ class Assessment(models.Model):
 
 
 class Sector(models.Model):
+    company_code = models.CharField(max_length=100, blank=True, default='')
     department = models.CharField(max_length=100)
     name = models.CharField(max_length=100)
     members = models.ManyToManyField(
@@ -95,6 +99,10 @@ class GamificationPoints(models.Model):
     REASON_CHOICES = (
         ('assessment_complete', 'Assessment Complete'),
         ('streak_bonus', 'Streak Bonus'),
+        ('water_challenge', 'Water Challenge'),
+        ('breathing_challenge', 'Breathing Challenge'),
+        ('daily_words', 'Daily Words'),
+        ('mood_checkin', 'Mood Check-in'),
     )
     employee = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='points'
@@ -102,3 +110,26 @@ class GamificationPoints(models.Model):
     points = models.IntegerField(default=0)
     reason = models.CharField(max_length=50, choices=REASON_CHOICES)
     earned_at = models.DateTimeField(auto_now_add=True)
+
+
+class GamificationState(models.Model):
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='gamification_state',
+    )
+    total_xp = models.IntegerField(default=0)
+    total_points = models.IntegerField(default=0)
+    streak_days = models.IntegerField(default=0)
+    last_streak_date = models.DateField(null=True, blank=True)
+    daily_words_state = models.JSONField(default=dict, blank=True)
+    mood_state = models.JSONField(default=dict, blank=True)
+    water_state = models.JSONField(default=dict, blank=True)
+    breathing_state = models.JSONField(default=dict, blank=True)
+    weekly_mission_state = models.JSONField(default=dict, blank=True)
+    completed_tasks_by_date = models.JSONField(default=dict, blank=True)
+    achievements = models.JSONField(default=list, blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f'GamificationState<{self.user_id}>'

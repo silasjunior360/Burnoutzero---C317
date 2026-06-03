@@ -1,3 +1,4 @@
+
 import { useState, useRef, useEffect } from 'react';
 import { Box, Paper, Typography, Avatar, TextField, Button, CircularProgress } from '@mui/material';
 import SendIcon from '@mui/icons-material/Send';
@@ -75,6 +76,7 @@ const AIChat = ({ onClose }: AIChatProps) => {
             setIsLoading(false);
         }
     };
+
 
     return (
         <Paper sx={{ p: 3, height: '600px', display: 'flex', flexDirection: 'column' }}>
