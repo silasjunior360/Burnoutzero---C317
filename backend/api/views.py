@@ -1,4 +1,4 @@
-﻿from rest_framework import generics, viewsets, status
+﻿from rest_framework import generics, viewsets, status, serializers
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
@@ -167,7 +167,27 @@ class AppointmentViewSet(viewsets.ModelViewSet):
         return Appointment.objects.none()
 
     def perform_create(self, serializer):
+        psychologist_name = str(
+            self.request.data.get('psychologist_name', '')
+        ).strip()
+        date_time = str(self.request.data.get('date_time', '')).strip()
+        if Appointment.objects.filter(
+            psychologist_name__iexact=psychologist_name,
+            date_time=date_time,
+            status='scheduled'
+        ).exists():
+            raise serializers.ValidationError(
+                "Este horário já está reservado com este psicólogo."
+            )
         serializer.save(employee=self.request.user)
+
+    @action(detail=False, methods=['get'])
+    def taken_slots(self, request):
+        taken = (
+            Appointment.objects.filter(status='scheduled')
+            .values('psychologist_name', 'date_time')
+        )
+        return Response(taken)
 
 
 def _latest_assessment_for(user):
@@ -705,7 +725,6 @@ class InsightViewSet(viewsets.ReadOnlyModelViewSet):
         return Insight.objects.all()
 
     def get_serializer_class(self):
-        from rest_framework import serializers
 
         class InsightSerializer(serializers.ModelSerializer):
             class Meta:
@@ -789,10 +808,19 @@ def team_overview(request):
 # ── Gamificação ──────────────────────────────────────────────────────────
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def my_points(request):
     state = _get_gamification_state(request.user)
+    if request.method == 'POST':
+        pts = request.data.get('points')
+        reason = request.data.get('reason', 'streak_bonus')
+        if pts is not None:
+            try:
+                state = _award_points(request.user, int(pts), reason)
+            except ValueError:
+                return Response({'error': 'Points must be an integer.'}, status=status.HTTP_400_BAD_REQUEST)
+
     points = GamificationPoints.objects.filter(employee=request.user)
     history = list(points.values('points', 'reason', 'earned_at'))
     return Response({
@@ -800,5 +828,6 @@ def my_points(request):
         'total_xp': state.total_xp,
         'streak_days': state.streak_days,
         'achievements': state.achievements,
+        'total_pontos': state.total_points,
         'history': history,
     })

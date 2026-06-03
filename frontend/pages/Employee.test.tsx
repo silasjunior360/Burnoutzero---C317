@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { MockedFunction } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import Employee from '../pages/Employee';
+import Employee from './Employee';
 import api from '../services/api';
 
 // Mock do axios (api)
@@ -31,6 +31,20 @@ vi.mock('recharts', async () => {
     ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div style={{ width: '100%', height: '100%' }}>{children}</div>,
   };
 });
+
+vi.mock('../user-context', () => ({
+  useUser: () => ({
+    user: {
+      id: 1,
+      username: 'test_user',
+      first_name: 'Test',
+      last_name: 'User',
+      role: 'employee',
+      avatar: 'TU',
+      total_pontos: 100,
+    },
+  }),
+}));
 
 describe('Employee Dashboard', () => {
   beforeEach(() => {

@@ -14,6 +14,7 @@ import Psychologist from './pages/Psychologist';
 import Manager from './pages/Manager';
 import Settings from './pages/settings';
 import { ThemeModeProvider } from './theme-context';
+import { UserProvider } from './user-context';
 import './index.css';
 
 function AppShell() {
@@ -55,7 +56,9 @@ function AppShell() {
 function App() {
   return (
     <ThemeModeProvider>
-      <AppShell />
+      <UserProvider>
+        <AppShell />
+      </UserProvider>
     </ThemeModeProvider>
   );
 }

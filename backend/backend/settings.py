@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -66,7 +67,14 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 postgres_host = os.environ.get('POSTGRES_HOST')
 
-if postgres_host:
+if 'test' in sys.argv or not postgres_host:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -75,13 +83,6 @@ if postgres_host:
             'PASSWORD': os.environ.get('POSTGRES_PASSWORD') or os.environ.get('POSTGRES_DB_PASSWORD', 'burnout_pass'),
             'HOST': postgres_host,
             'PORT': os.environ.get('POSTGRES_PORT') or os.environ.get('POSTGRES_DB_PORT', '5432'),
-        }
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 

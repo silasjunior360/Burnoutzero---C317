@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { expect, test, describe, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import Home from '../pages/Home';
+import Home from './Home';
 
 vi.mock('../services/api', () => ({
   default: {

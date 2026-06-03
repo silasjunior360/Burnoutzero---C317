@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { MockedFunction } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import Psychologist from '../pages/Psychologist';
+import Psychologist from './Psychologist';
 import api from '../services/api';
 
 vi.mock('../services/api', () => ({
@@ -64,14 +64,14 @@ describe('Psychologist Dashboard Page', () => {
     });
 
     // Check patient name rendered
-    expect(screen.getByText('patient_alpha')).toBeInTheDocument();
-    expect(screen.getByText('ativo')).toBeInTheDocument();
+    expect(screen.getAllByText('patient_alpha')[0]).toBeInTheDocument();
+    expect(screen.getByText('Ativo')).toBeInTheDocument();
 
     // Check insight card rendered
     expect(screen.getByText('Nível de estresse alto.')).toBeInTheDocument();
 
     // Trigger validation dialog
-    const btnValidar = screen.getByRole('button', { name: /Analisar \/ Validar/i });
+    const btnValidar = screen.getAllByRole('button', { name: /Validar/i })[0];
     fireEvent.click(btnValidar);
 
     // Dialog title
@@ -89,9 +89,9 @@ describe('Psychologist Dashboard Page', () => {
     fireEvent.click(btnSalvar);
 
     await waitFor(() => {
-      expect(mockedPatch).toHaveBeenCalledWith('/insights/10/validar/', {
-        texto: 'Novo estresse texto.',
-        recomendacoes: 'Nova meditação.',
+      expect(mockedPatch).toHaveBeenCalledWith('/insights/10/validate/', {
+        text: 'Novo estresse texto.',
+        recommendations: 'Nova meditação.',
       });
       // The modal should close
       expect(screen.queryByText('Validar Insight')).not.toBeInTheDocument();

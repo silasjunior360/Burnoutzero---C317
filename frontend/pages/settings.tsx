@@ -31,6 +31,7 @@ import VisibilityOff from '@mui/icons-material/VisibilityOff';
 import SaveIcon from '@mui/icons-material/Save';
 import ShieldIcon from '@mui/icons-material/Shield';
 import api from '../services/api';
+import { useUser } from '../user-context';
 import { useThemeMode } from '../theme-context';
 
 type ProfileForm = {
@@ -123,6 +124,7 @@ export default function Settings() {
 	const navigate = useNavigate();
 	const muiTheme = useTheme();
 	const { mode, toggleTheme } = useThemeMode();
+	const { user, loading: userLoading } = useUser();
 	const [backRoute, setBackRoute] = useState('/employee');
 	const [profileForm, setProfileForm] = useState<ProfileForm>(emptyProfile);
 	const [passwordForm, setPasswordForm] = useState<PasswordForm>(emptyPassword);
@@ -136,48 +138,24 @@ export default function Settings() {
 	const [errorMessage, setErrorMessage] = useState('');
 
 	useEffect(() => {
-		let active = true;
+		if (!userLoading && !user) {
+			navigate('/login');
+			return;
+		}
 
-		const loadUser = async () => {
-			try {
-				const response = await api.get('/users/me/');
-				if (!active) return;
+		if (user) {
+			setBackRoute(resolveHomeRouteFromUser(user));
+			setProfileForm({
+				username: user.username || '',
+				firstName: user.first_name || '',
+				lastName: user.last_name || '',
+				email: user.email || '',
+				avatar: user.avatar || '',
+			});
+		}
 
-				const data = response.data || {};
-				setBackRoute(resolveHomeRouteFromUser(data));
-				setProfileForm({
-					username: data.username || '',
-					firstName: data.first_name || '',
-					lastName: data.last_name || '',
-					email: data.email || '',
-					avatar: data.avatar || '',
-				});
-			} catch (error) {
-				if (active) {
-					const responseError = error as { response?: { status?: number } };
-					if (responseError.response?.status === 401) {
-						localStorage.removeItem('access_token');
-						localStorage.removeItem('refresh_token');
-						localStorage.removeItem('user_role');
-						navigate('/login');
-						return;
-					}
-
-					setErrorMessage('Não foi possível carregar seus dados agora. Verifique sua conexão e tente novamente.');
-				}
-			} finally {
-				if (active) {
-					setLoading(false);
-				}
-			}
-		};
-
-		loadUser();
-
-		return () => {
-			active = false;
-		};
-	}, [navigate]);
+		setLoading(userLoading);
+	}, [user, userLoading, navigate]);
 
 	const updateProfileField = (field: keyof ProfileForm) => (
 		event: React.ChangeEvent<HTMLInputElement>

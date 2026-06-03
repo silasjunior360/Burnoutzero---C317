@@ -55,7 +55,11 @@ urlpatterns = [
         name='user_password_change'
     ),
     path('', include(router.urls)),
-    path('insights/<int:pk>/validate/', validate_insight, name='validate_insight'),
+    path(
+        'insights/<int:pk>/validate/',
+        validate_insight,
+        name='validate_insight',
+    ),
     path('manager/team-overview/', team_overview, name='team_overview'),
     path('gamification/my-points/', my_points, name='my_points'),
     path('gamification/me/', gamification_me, name='gamification_me'),

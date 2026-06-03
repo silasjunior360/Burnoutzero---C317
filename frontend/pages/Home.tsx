@@ -22,9 +22,11 @@ import api from '../services/api';
 import {
   EmojiEvents as EmojiEventsIcon,
   ExpandMore as ExpandMoreIcon,
-  ExpandLess as ExpandLessIcon
+  ExpandLess as ExpandLessIcon,
+  CalendarMonth as CalendarMonthIcon
 } from '@mui/icons-material';
- 
+import ChatIcon from '@mui/icons-material/Chat';
+
 import { keyframes } from '@mui/system';
 import brasaPng from '../../Icons/brasa.png';
 import correntezaPng from '../../Icons/correnteza.png';
@@ -464,7 +466,7 @@ const BreathingExercise = ({ onComplete }: { onComplete: (xp: number) => void })
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
-  }, [isActive, currentPhase, onComplete, xpAwarded]);
+  }, [EXHALE_DURATION, HOLD_DURATION, INHALE_DURATION, TOTAL_DURATION, currentPhase, isActive, onComplete, xpAwarded]);
 
   const handleStart = () => {
     setIsActive(true);
@@ -561,7 +563,7 @@ const BreathingExercise = ({ onComplete }: { onComplete: (xp: number) => void })
 
         {progress === 100 && (
           <Box sx={{ mt: 1, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
-            <Typography variant="body2" sx={{ color: 'success.main', fontWeight: 600 }}>
+            <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
               ✓ Sessão concluída — +50 XP
             </Typography>
             <Typography variant="caption" sx={{ color: 'success.dark', mt: 1, display: 'block' }}>
@@ -611,7 +613,7 @@ const DailyWordsMission = ({ onCompleteXp }: { onCompleteXp: (xp: number) => voi
 
   useEffect(() => {
     writeStorage(STORAGE_KEY, state);
-  }, [state]);
+  }, [STORAGE_KEY, state]);
 
 
   const handleRecordWord = () => {
@@ -719,7 +721,7 @@ const MoodChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void })
 
   useEffect(() => {
     writeStorage(STORAGE_KEY, state);
-  }, [state]);
+  }, [STORAGE_KEY, state]);
 
   const claimedToday = claimedDate === todayKey;
 
@@ -879,7 +881,7 @@ const WeeklyMissionChallenge = () => {
 
   useEffect(() => {
     writeStorage(STORAGE_KEY, state);
-  }, [state]);
+  }, [STORAGE_KEY, state]);
 
   const weekStart = new Date();
   weekStart.setDate(weekStart.getDate() - 4);
@@ -997,7 +999,7 @@ const StreakChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void 
 
   useEffect(() => {
     writeStorage(STORAGE_KEY, state);
-  }, [state]);
+  }, [STORAGE_KEY, state]);
 
   const claimedToday = claimedDate === todayKey;
 
@@ -1066,7 +1068,7 @@ const WaterChallenge = ({ onGainXp }: { onGainXp: (xp: number) => void }) => {
 
   useEffect(() => {
     writeStorage(STORAGE_KEY, { totalMl, lastSipTime, waterXp, history });
-  }, [totalMl, lastSipTime, waterXp, history]);
+  }, [STORAGE_KEY, totalMl, lastSipTime, waterXp, history]);
 
   const handleSip = () => {
     if (!canSip) return;
@@ -1152,7 +1154,7 @@ export default function Jornada() {
     username: storedCurrentUser.username || ''
   });
 
-  const [totalXp, setTotalXp] = useState(user.xp);
+  const [totalXp, setTotalXp] = useState(0);
   const [backRoute, setBackRoute] = useState('/employee');
   const [selectedConquestIndex, setSelectedConquestIndex] = useState<number | null>(null);
   const [openRewards, setOpenRewards] = useState(false);
@@ -1203,7 +1205,7 @@ export default function Jornada() {
     else if (currentLevel >= 1) levelTier = 0;
 
     setUserTiers({ consistency: consistencyTier, hydration: hydrationTier, breathing: breathingTier, level: levelTier });
-  }, [openRewards]);
+  }, [openRewards, user.level]);
 
   // fetch profile and sync basic stats on mount
   useEffect(() => {
@@ -1339,6 +1341,7 @@ export default function Jornada() {
     return () => window.removeEventListener('user-profile-updated', handleUserProfileUpdated);
   }, []);
   const navigate = useNavigate();
+  const [tabValue, setTabValue] = useState('home');
   const [isDailyExpanded, setIsDailyExpanded] = useState(true);
   const [isWeeklyExpanded, setIsWeeklyExpanded] = useState(true);
   const [isConquestExpanded, setIsConquestExpanded] = useState(true);
@@ -1496,7 +1499,7 @@ export default function Jornada() {
       const stored = readStorage<{ history: Record<string, number>; awardedDate?: string }>(STORAGE_KEY, { history: {}, awardedDate: undefined });
       setHistory(stored.history || {});
       setAwardedDate(stored.awardedDate);
-    }, []);
+    }, [STORAGE_KEY]);
 
     const getLast7DaysCount = () => {
       const keys = Object.keys(history);
@@ -1525,7 +1528,7 @@ export default function Jornada() {
           setAwardedDate(today);
         }
       }
-    }, [weeklyCount, awardedDate, history, onCompleteXp]);
+    }, [STORAGE_KEY, TARGET_DAYS, weeklyCount, awardedDate, history, onCompleteXp]);
 
     const progress = Math.min(100, (weeklyCount / TARGET_DAYS) * 100);
 
@@ -1568,9 +1571,51 @@ export default function Jornada() {
         <Typography variant="h5" sx={{ color: 'text.secondary', mb: 2 }}>
           Olá, {user.nome}! Vamos começar sua jornada de hoje?
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button variant="outlined" onClick={() => navigate(backRoute)} sx={{ borderRadius: 2 }}>
-            Voltar
+
+        <Box sx={{ mt: 3, display: 'flex', gap: 5, flexWrap: 'wrap', justifyContent: 'center' }}>
+          <Button
+            variant={tabValue === 'area' ? 'contained' : 'outlined'}
+            onClick={() => {
+              setTabValue('area');
+              navigate(backRoute);
+            }}
+            sx={{ borderRadius: 2, minWidth: 140, textTransform: 'none' }}
+          >
+            Histórico
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<ChatIcon />}
+            onClick={() => {
+              // request Employee page to open chat view
+              setTabValue('chat');
+              navigate(backRoute, { state: { openChat: true } });
+            }}
+            sx={{ borderRadius: 2, minWidth: 240, textTransform: 'none' }}
+          >
+            Chat de Acolhimento
+          </Button>
+          <Button
+            variant="contained"
+            color="secondary"
+            onClick={() => {
+              // navigate to the employee area and request the evaluation dialog to open
+              navigate(backRoute, { state: { openAvaliacao: true } });
+            }}
+            sx={{ borderRadius: 2, minWidth: 180, textTransform: 'none' }}
+          >
+            Nova Avaliação
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<CalendarMonthIcon />}
+            onClick={() => {
+              setTabValue('schedule');
+              navigate(backRoute, { state: { openSchedule: true } });
+            }}
+            sx={{ borderRadius: 2, minWidth: 220, textTransform: 'none' }}
+          >
+            Agendar Consulta
           </Button>
           <Button
             variant="outlined"
@@ -1627,11 +1672,11 @@ export default function Jornada() {
               <CardContent sx={{ p: 3 }}>
                 <Grid container spacing={3}>
                   <Grid size={{ xs: 12 }}>
-                    <WeeklyHydrationChallenge onCompleteXp={handleGainXp} />
+                    <WeeklyHydrationChallenge key={`weekly-water-${user.username}`} onCompleteXp={handleGainXp} />
                   </Grid>
                   <Grid size={{ xs: 12 }}>
                     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                      <MoodChallenge onCompleteXp={handleGainXp} />
+                      <MoodChallenge key={`mood-${user.username}`} onCompleteXp={handleGainXp} />
                     </Box>
                   </Grid>
                   <Grid size={{ xs: 12 }}>
@@ -1779,7 +1824,7 @@ export default function Jornada() {
                   </Typography>
                 </Box>
               )}
-              <StreakChallenge onCompleteXp={handleGainXp} />
+              <StreakChallenge key={`streak-${user.username}`} onCompleteXp={handleGainXp} />
               <Button
                 fullWidth
                 variant="outlined"

@@ -18,7 +18,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
-    role = serializers.CharField()
+    role = serializers.CharField(required=False, default='employee')
 
     ROLE_ALIASES = {
         'funcionario': 'employee',
@@ -36,7 +36,11 @@ class UserCreateSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     def validate_role(self, value):
-        return self.ROLE_ALIASES.get(value, value)
+        mapped_value = self.ROLE_ALIASES.get(value, value)
+        valid_roles = [choice[0] for choice in User.ROLE_CHOICES]
+        if mapped_value not in valid_roles:
+            raise serializers.ValidationError(f"Invalid role: {value}")
+        return mapped_value
 
     def validate_department(self, value):
         return value.strip() if isinstance(value, str) else value
@@ -127,12 +131,16 @@ class SectorSerializer(serializers.ModelSerializer):
             'bom': 80,
             'otimo': 100,
         }
-        cutoff = timezone.localdate() - timedelta(days=4)
         scores = []
 
-        for date_key, value in history.items():
+        ordered_history = sorted(
+            history.items(),
+            key=lambda item: parse_date(item[0]) or timezone.localdate(),
+        )
+
+        for date_key, value in ordered_history[-5:]:
             date_value = parse_date(date_key)
-            if not date_value or date_value < cutoff:
+            if not date_value:
                 continue
 
             score = score_map.get(str(value).strip().lower())

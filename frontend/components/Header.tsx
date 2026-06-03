@@ -191,7 +191,7 @@ export default function Header() {
             )}
           </Box>
 
-          {!isAuthPage && (
+          {!isAuthPage && userRole !== null && userRole !== 'manager'  && (
             <>
               {/* Menu de Usuário */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

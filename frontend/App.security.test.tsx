@@ -1,9 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import App from '../App';
+import App from './App';
 
-vi.mock('../services/api', () => ({
+vi.mock('./services/api', () => ({
   default: {
     post: vi.fn(),
     get: vi.fn(),

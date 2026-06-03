@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { MockedFunction } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import Login from '../pages/Login';
+import Login from './Login';
 import api from '../services/api';
 
 const mockedUsedNavigate = vi.fn();
@@ -37,8 +37,13 @@ describe('Login Page', () => {
       </MemoryRouter>
     );
 
+<<<<<<< HEAD:frontend/tests/Auth.test.tsx
     expect(screen.getByLabelText(/Email/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Senha/i)).toBeInTheDocument();
+=======
+    expect(screen.getByLabelText(/Usuário/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^Senha/)).toBeInTheDocument();
+>>>>>>> origin/main:frontend/pages/Login.test.tsx
     expect(screen.getByRole('button', { name: /Entrar/i })).toBeInTheDocument();
   });
 
@@ -56,8 +61,13 @@ describe('Login Page', () => {
       </MemoryRouter>
     );
 
+<<<<<<< HEAD:frontend/tests/Auth.test.tsx
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'user1' } });
     fireEvent.change(screen.getByLabelText(/Senha/i), { target: { value: 'pass123' } });
+=======
+    fireEvent.change(screen.getByLabelText(/Usuário/i), { target: { value: 'user1' } });
+    fireEvent.change(screen.getByLabelText(/^Senha/), { target: { value: 'pass123' } });
+>>>>>>> origin/main:frontend/pages/Login.test.tsx
     fireEvent.submit(screen.getByRole('button', { name: /Entrar/i }).closest('form')!);
 
     await waitFor(() => {
@@ -66,7 +76,7 @@ describe('Login Page', () => {
         password: 'pass123'
       });
       expect(localStorage.getItem('access_token')).toBe('fake-access-token');
-      expect(mockedUsedNavigate).toHaveBeenCalledWith('/employee');
+      expect(mockedUsedNavigate).toHaveBeenCalledWith('/home');
     }, { timeout: 3000 });
   });
 
@@ -84,8 +94,13 @@ describe('Login Page', () => {
       </MemoryRouter>
     );
 
+<<<<<<< HEAD:frontend/tests/Auth.test.tsx
     fireEvent.change(screen.getByLabelText(/Email/i), { target: { value: 'psico' } });
     fireEvent.change(screen.getByLabelText(/Senha/i), { target: { value: 'pass' } });
+=======
+    fireEvent.change(screen.getByLabelText(/Usuário/i), { target: { value: 'psico' } });
+    fireEvent.change(screen.getByLabelText(/^Senha/), { target: { value: 'pass' } });
+>>>>>>> origin/main:frontend/pages/Login.test.tsx
     fireEvent.submit(screen.getByRole('button', { name: /Entrar/i }).closest('form')!);
 
     await waitFor(() => {
