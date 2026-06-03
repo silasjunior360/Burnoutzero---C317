@@ -20,7 +20,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
-import { useUser } from '../user-context';
+import { useUser } from '../use-user';
 import api from '../services/api';
 import AIChat from '../components/AIChat/AIChat';
 

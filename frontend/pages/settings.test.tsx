@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { expect, test, describe, vi, beforeEach } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import Settings from '../pages/settings';
-import { useUser } from '../user-context';
+import { useUser } from '../use-user';
 import { useThemeMode } from '../theme-context';
 import apiMock from '../services/api';
 
