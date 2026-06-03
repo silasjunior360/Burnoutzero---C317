@@ -53,7 +53,7 @@ jobs:
       - run: npm ci
 
       - name: Run unit tests with reports
-        run: npx vitest run --reporter=default --reporter=junit --outputFile=junit-report.xml --reporter=html --outputFile=vitest-html-report/index.html
+        run: npx vitest run --reporter=default --reporter=junit --outputFile.junit=junit-report.xml --reporter=html --outputFile.html=vitest-html-report/index.html
 
       - name: Upload Vitest reports
         uses: actions/upload-artifact@v4
