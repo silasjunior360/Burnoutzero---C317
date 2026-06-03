@@ -52,7 +52,18 @@ jobs:
 
       - run: npm ci
 
-      - run: npm test
+      - name: Run unit tests with reports
+        run: npx vitest run --reporter=default --reporter=junit --outputFile=junit-report.xml --reporter=html --outputFile=vitest-html-report/index.html
+
+      - name: Upload Vitest reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-unit-test-reports
+          path: |
+            junit-report.xml
+            vitest-html-report/
+          retention-days: 7
 
   e2e:
     name: "E2E Tests"
