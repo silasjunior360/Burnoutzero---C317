@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from .models import User, Assessment, FollowUp, Appointment, Sector, GamificationState
 
 
@@ -48,8 +49,28 @@ class UserCreateSerializer(serializers.ModelSerializer):
         return value.strip() if isinstance(value, str) else value
 
     def create(self, validated_data):
+        company_code = str(validated_data.get('company_code', '')).strip()
+        department = str(validated_data.get('department', '')).strip()
+
+        if company_code and not department:
+            validated_data['department'] = company_code
+        elif department and not company_code:
+            validated_data['company_code'] = department
+
         user = User.objects.create_user(**validated_data)
         return user
+
+
+class EmailOrUsernameTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        login_identifier = str(attrs.get(self.username_field, '')).strip()
+
+        if login_identifier:
+            matched_user = User.objects.filter(email__iexact=login_identifier).order_by('id').first()
+            if matched_user:
+                attrs[self.username_field] = matched_user.get_username()
+
+        return super().validate(attrs)
 
 
 class AssessmentSerializer(serializers.ModelSerializer):

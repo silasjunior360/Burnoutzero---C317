@@ -124,7 +124,7 @@ export default function Settings() {
 	const navigate = useNavigate();
 	const muiTheme = useTheme();
 	const { mode, toggleTheme } = useThemeMode();
-	const { user, loading: userLoading } = useUser();
+	const { user, loading: userLoading, refreshUser } = useUser();
 	const [backRoute, setBackRoute] = useState('/employee');
 	const [profileForm, setProfileForm] = useState<ProfileForm>(emptyProfile);
 	const [passwordForm, setPasswordForm] = useState<PasswordForm>(emptyPassword);
@@ -138,8 +138,15 @@ export default function Settings() {
 	const [errorMessage, setErrorMessage] = useState('');
 
 	useEffect(() => {
-		if (!userLoading && !user) {
+		const token = localStorage.getItem('access_token');
+
+		if (!userLoading && !user && !token) {
 			navigate('/login');
+			return;
+		}
+
+		if (!userLoading && !user && token) {
+			void refreshUser();
 			return;
 		}
 
@@ -155,7 +162,7 @@ export default function Settings() {
 		}
 
 		setLoading(userLoading);
-	}, [user, userLoading, navigate]);
+	}, [user, userLoading, navigate, refreshUser]);
 
 	const updateProfileField = (field: keyof ProfileForm) => (
 		event: React.ChangeEvent<HTMLInputElement>

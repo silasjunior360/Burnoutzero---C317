@@ -146,7 +146,7 @@ export default function Header() {
               Burnoutzero
             </Typography>
 
-            {!isAuthPage && userRole !== null && userRole !== 'manager' && (
+            {!isAuthPage && userRole === 'employee' && (
               <>
                 {/* Divider */}
                 <Divider orientation="vertical" flexItem sx={{ my: 1 }} />
@@ -191,7 +191,7 @@ export default function Header() {
             )}
           </Box>
 
-          {!isAuthPage && userRole !== null && userRole !== 'manager'  && (
+          {!isAuthPage && userRole !== null && (
             <>
               {/* Menu de Usuário */}
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

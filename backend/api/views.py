@@ -5,6 +5,8 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import PermissionDenied
 from django.db.models import Avg
+from django.db.models import Q
+from django.db.models.functions import Lower, Trim
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.contrib.auth.password_validation import validate_password
@@ -209,19 +211,29 @@ class SectorViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
-        if user.role != 'manager' or not user.department:
+        company_key = _user_company_key(user)
+        if user.role != 'manager' or not company_key:
             return Sector.objects.none()
 
-        return Sector.objects.filter(department=user.department).prefetch_related('members')
+        return (
+            Sector.objects.annotate(
+                department_key=Lower(Trim('department')),
+                company_code_key=Lower(Trim('company_code')),
+            )
+            .filter(Q(department_key=company_key) | Q(company_code_key=company_key))
+            .prefetch_related('members')
+        )
 
     def perform_create(self, serializer):
         user = self.request.user
-        if user.role != 'manager':
+        company_key = _user_company_key(user)
+        if user.role != 'manager' or not company_key:
             raise PermissionDenied('Acesso negado.')
-        serializer.save(department=user.department)
+        company_value = _user_company_value(user)
+        serializer.save(department=company_value, company_code=company_value)
 
     def perform_destroy(self, instance):
-        if instance.department != self.request.user.department:
+        if not _same_company(instance, _user_company_key(self.request.user)):
             raise PermissionDenied('Acesso negado.')
         instance.delete()
 
@@ -233,17 +245,26 @@ class SectorViewSet(viewsets.ModelViewSet):
         if not username:
             return Response({'error': 'Informe o username.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        company_key = _user_company_key(request.user)
+        if not company_key:
+            return Response({'error': 'Acesso negado.'}, status=status.HTTP_403_FORBIDDEN)
+
         try:
             member = User.objects.get(
                 username=username,
-                department=request.user.department,
                 role__in=['employee', 'psychologist'],
             )
         except User.DoesNotExist:
             return Response({'error': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
-        for other_sector in Sector.objects.filter(
-            department=request.user.department,
+        if not _same_company(member, company_key):
+            return Response({'error': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        for other_sector in Sector.objects.annotate(
+            department_key=Lower(Trim('department')),
+            company_code_key=Lower(Trim('company_code')),
+        ).filter(
+            Q(department_key=company_key) | Q(company_code_key=company_key),
             members=member,
         ).exclude(pk=sector.pk):
             other_sector.members.remove(member)
@@ -259,13 +280,19 @@ class SectorViewSet(viewsets.ModelViewSet):
         if not username:
             return Response({'error': 'Informe o username.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        company_key = _user_company_key(request.user)
+        if not company_key:
+            return Response({'error': 'Acesso negado.'}, status=status.HTTP_403_FORBIDDEN)
+
         try:
             member = User.objects.get(
                 username=username,
-                department=request.user.department,
                 role__in=['employee', 'psychologist'],
             )
         except User.DoesNotExist:
+            return Response({'error': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not _same_company(member, company_key):
             return Response({'error': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
         sector.members.remove(member)
@@ -377,6 +404,18 @@ def _ensure_list(value):
 
 def _normalize_company_code(value):
     return (value or '').strip().lower()
+
+
+def _user_company_key(user):
+    return _normalize_company_code(user.department) or _normalize_company_code(user.company_code)
+
+
+def _user_company_value(user):
+    return (user.department or user.company_code or '').strip()
+
+
+def _same_company(user, company_key):
+    return _normalize_company_code(user.department) == company_key or _normalize_company_code(user.company_code) == company_key
 
 
 def _local_date_key():
@@ -759,7 +798,8 @@ def validate_insight(request, pk):
 def team_overview(request):
     if request.user.role != 'manager':
         return Response({'error': 'Acesso negado.'}, status=403)
-    if not request.user.department:
+    company_code = _user_company_key(request.user)
+    if not company_code:
         return Response({
             'averages': {
                 'avg_stress': None,
@@ -771,11 +811,10 @@ def team_overview(request):
             'team_members': [],
             'total_team_members': 0,
         })
-    company_code = _normalize_company_code(request.user.department)
     company_users = User.objects.filter(
         role__in=['employee', 'psychologist']
     )
-    company_users = [user for user in company_users if _normalize_company_code(user.department) == company_code]
+    company_users = [user for user in company_users if _same_company(user, company_code)]
     employees = [user for user in company_users if user.role == 'employee']
     agg = Assessment.objects.filter(employee__in=employees).aggregate(
         avg_stress=Avg('stress'),

@@ -12,6 +12,7 @@ from .views import (
     gamification_me, award_gamification_points,
     UserPasswordChangeView
 )
+from .serializers import EmailOrUsernameTokenObtainPairSerializer
 
 router = DefaultRouter()
 router.register(
@@ -31,7 +32,7 @@ router.register(r'manager/sectors', SectorViewSet, basename='manager-sectors')
 urlpatterns = [
     path(
         'auth/login/',
-        TokenObtainPairView.as_view(),
+        TokenObtainPairView.as_view(serializer_class=EmailOrUsernameTokenObtainPairSerializer),
         name='token_obtain_pair'
     ),
     path(

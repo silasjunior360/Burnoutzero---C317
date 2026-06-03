@@ -28,6 +28,35 @@ class ApiRouteIntegrationTestCase(APITestCase):
         token = response.data['access']
         self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
 
+    def test_jwt_login_accepts_email(self):
+        self._register_user(username='email_login_user', role='employee')
+
+        response = self.client.post(reverse('token_obtain_pair'), {
+            'username': 'email_login_user@example.com',
+            'password': 'safePassword123'
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn('access', response.data)
+        self.assertIn('refresh', response.data)
+
+    def test_register_copies_company_code_into_department(self):
+        response = self.client.post(reverse('auth_register'), {
+            'username': 'company_user',
+            'password': 'safePassword123',
+            'email': 'company_user@example.com',
+            'first_name': 'Company',
+            'last_name': 'User',
+            'role': 'employee',
+            'company_code': 'EMPRESA-ALFA'
+        })
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+        user = User.objects.get(username='company_user')
+        self.assertEqual(user.company_code, 'EMPRESA-ALFA')
+        self.assertEqual(user.department, 'EMPRESA-ALFA')
+
     def test_complete_employee_and_psychologist_workflow(self):
         employee = self._register_user(username='alpha_employee', role='employee', department='TI')
         self._register_user(username='beta_psychologist', role='psychologist', department='Saude')

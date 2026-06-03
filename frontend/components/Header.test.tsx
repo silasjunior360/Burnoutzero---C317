@@ -93,6 +93,29 @@ describe('Header Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/login');
   });
 
+  test('should show logout option for manager users too', async () => {
+    localStorage.setItem('access_token', 'token');
+    localStorage.setItem('refresh_token', 'refresh');
+    localStorage.setItem('user_role', 'manager');
+
+    vi.mocked(apiMock.get).mockResolvedValue({
+      data: { first_name: 'Maria', role: 'manager' },
+    });
+
+    renderHeader();
+
+    await waitFor(() => {
+      expect(screen.getAllByRole('button').length).toBeGreaterThan(0);
+    });
+
+    const buttons = screen.getAllByRole('button');
+    const avatarBtn = buttons[0];
+    fireEvent.click(avatarBtn);
+
+    expect(screen.getByText('Sair')).toBeInTheDocument();
+    expect(screen.queryByText('Desafios')).not.toBeInTheDocument();
+  });
+
   test('should listen to user-profile-updated custom events', async () => {
     vi.mocked(apiMock.get).mockResolvedValue({
       data: { first_name: 'John', role: 'employee' },
