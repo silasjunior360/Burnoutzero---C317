@@ -6,7 +6,7 @@ import { useUser } from '../use-user';
 import { useThemeMode } from '../theme-context';
 import apiMock from '../services/api';
 
-vi.mock('../user-context', () => ({
+vi.mock('../use-user', () => ({
   useUser: vi.fn(),
 }));
 

@@ -113,11 +113,12 @@ test.describe('Manager Dashboard E2E', () => {
     await expect(page.locator('text=Total de Usuários')).toBeVisible();
     await expect(page.locator('.MuiTypography-h4', { hasText: '2' })).toBeVisible(); // from total_team_members
 
-    await expect(page.locator('text=Desempenho Médio')).toBeVisible();
+    await expect(page.locator('text=Desempenho Semanal Médio')).toBeVisible();
     await expect(page.locator('text=80%')).toBeVisible();
 
     await expect(page.locator('text=Alertas Ativos')).toBeVisible();
-    await expect(page.locator('text=troubled_emp')).toBeVisible();
+    await page.click('text=Alertas Ativos');
+    await expect(page.locator('text=Troubled Employee (troubled_emp)')).toBeVisible();
   });
 
   test('should toggle team member details list', async ({ page }) => {

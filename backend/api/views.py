@@ -359,7 +359,6 @@ LEVEL_ACHIEVEMENTS = [
     {'titulo': 'Cavalheiro de Ouro', 'badge': 'ouro', 'requisito': 'Alcançar o Nível 50', 'xp': 1200},
     {'titulo': 'Coração de Obsidiana', 'badge': 'obsidiana', 'requisito': 'Alcançar o Nível 75', 'xp': 5000},
     {'titulo': 'Cristal de Diamante', 'badge': 'diamante', 'requisito': 'Alcançar o Nível 100', 'xp': 10000},
-    
 ]
 
 

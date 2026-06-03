@@ -32,7 +32,7 @@ vi.mock('recharts', async () => {
   };
 });
 
-vi.mock('../user-context', () => ({
+vi.mock('../use-user', () => ({
   useUser: () => ({
     user: {
       id: 1,

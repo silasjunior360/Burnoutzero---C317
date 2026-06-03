@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from datetime import timedelta
 from .models import User, Assessment, FollowUp, Appointment, Sector, GamificationState
 
 
@@ -94,10 +93,8 @@ class SectorSerializer(serializers.ModelSerializer):
     def get_usuarios_detalhes(self, obj):
         details = []
         for user in obj.members.filter(role__in=['employee', 'psychologist']).order_by('username'):
-            assessment = self._latest_assessment(user)
             engagement = self._user_engagement(user)
             health = self._health_status(engagement)
-            latest = assessment
             details.append({
                 'id': user.id,
                 'username': user.username,
