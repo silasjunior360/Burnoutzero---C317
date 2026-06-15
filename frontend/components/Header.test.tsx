@@ -72,17 +72,18 @@ describe('Header Component', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/psychologist');
   });
 
-  test('should handle logout flow correctly', async () => {
+  test('should handle logout flow correctly with the user profile button', async () => {
     localStorage.setItem('access_token', 'token');
     localStorage.setItem('refresh_token', 'refresh');
+    localStorage.setItem('user_role', 'manager');
 
     vi.mocked(apiMock.get).mockResolvedValue({
-      data: { first_name: 'John', role: 'employee' },
+      data: { first_name: 'John', role: 'manager' },
     });
 
     renderHeader();
 
-    const avatarBtn = await screen.findByRole('button', { name: /j/i });
+    const avatarBtn = await screen.findByRole('button', { name: /abrir perfil do usuário/i });
     fireEvent.click(avatarBtn);
 
     const logoutBtn = screen.getByText('Sair');
@@ -110,6 +111,19 @@ describe('Header Component', () => {
     await waitFor(() => {
       expect(apiMock.get).toHaveBeenCalled();
     });
+  });
+
+  test('should expose the user profile trigger for non-employee roles', async () => {
+    localStorage.setItem('user_role', 'psychologist');
+
+    vi.mocked(apiMock.get).mockResolvedValue({
+      data: { first_name: 'John', role: 'psychologist' },
+    });
+
+    renderHeader();
+
+    const profileBtn = await screen.findByRole('button', { name: /abrir perfil do usuário/i });
+    expect(profileBtn).toBeInTheDocument();
   });
 
   test('should fallback to defaults if profile load fails', async () => {

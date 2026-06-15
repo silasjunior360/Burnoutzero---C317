@@ -4,7 +4,7 @@ from rest_framework.decorators import api_view, permission_classes, action
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.exceptions import PermissionDenied
-from django.db.models import Avg
+from django.db.models import Avg, Q
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.contrib.auth.password_validation import validate_password
@@ -26,6 +26,12 @@ from .serializers import (
     AssessmentSerializer, FollowUpSerializer,
     AppointmentSerializer, SectorSerializer
 )
+from .serializers import EmailTokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
+
+
+class EmailTokenObtainPairView(TokenObtainPairView):
+    serializer_class = EmailTokenObtainPairSerializer
 
 
 class RegisterView(generics.CreateAPIView):
@@ -207,21 +213,38 @@ class SectorViewSet(viewsets.ModelViewSet):
     serializer_class = SectorSerializer
     permission_classes = [IsAuthenticated]
 
+    def _get_sector_scope(self, user):
+        return _normalize_company_code(user.company_code or user.department)
+
     def get_queryset(self):
         user = self.request.user
-        if user.role != 'manager' or not user.department:
+        scope = self._get_sector_scope(user)
+        if user.role != 'manager' or not scope:
             return Sector.objects.none()
 
-        return Sector.objects.filter(department=user.department).prefetch_related('members')
+        return Sector.objects.filter(
+            Q(company_code=scope) | Q(department=scope)
+        ).prefetch_related('members')
 
     def perform_create(self, serializer):
         user = self.request.user
+        scope = self._get_sector_scope(user)
         if user.role != 'manager':
             raise PermissionDenied('Acesso negado.')
-        serializer.save(department=user.department)
+        if not scope:
+            raise PermissionDenied('Informe o código da empresa ou o departamento do gerente.')
+        serializer.save(
+            company_code=scope,
+            department=user.department or scope,
+        )
 
     def perform_destroy(self, instance):
-        if instance.department != self.request.user.department:
+        scope = self._get_sector_scope(self.request.user)
+        if (
+            scope
+            and _normalize_company_code(instance.company_code) != scope
+            and _normalize_company_code(instance.department) != scope
+        ):
             raise PermissionDenied('Acesso negado.')
         instance.delete()
 
@@ -229,21 +252,23 @@ class SectorViewSet(viewsets.ModelViewSet):
     def assign(self, request, pk=None):
         sector = self.get_object()
         username = request.data.get('username', '')
+        scope = self._get_sector_scope(request.user)
 
         if not username:
             return Response({'error': 'Informe o username.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            member = User.objects.get(
-                username=username,
-                department=request.user.department,
-                role__in=['employee', 'psychologist'],
-            )
-        except User.DoesNotExist:
+        member = User.objects.filter(
+            username=username,
+            role__in=['employee', 'psychologist'],
+        ).filter(
+            Q(company_code=scope) | Q(department=scope)
+        ).first()
+
+        if member is None:
             return Response({'error': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
         for other_sector in Sector.objects.filter(
-            department=request.user.department,
+            Q(company_code=scope) | Q(department=scope),
             members=member,
         ).exclude(pk=sector.pk):
             other_sector.members.remove(member)
@@ -255,17 +280,19 @@ class SectorViewSet(viewsets.ModelViewSet):
     def remove_member(self, request, pk=None):
         sector = self.get_object()
         username = request.data.get('username', '')
+        scope = self._get_sector_scope(request.user)
 
         if not username:
             return Response({'error': 'Informe o username.'}, status=status.HTTP_400_BAD_REQUEST)
 
-        try:
-            member = User.objects.get(
-                username=username,
-                department=request.user.department,
-                role__in=['employee', 'psychologist'],
-            )
-        except User.DoesNotExist:
+        member = User.objects.filter(
+            username=username,
+            role__in=['employee', 'psychologist'],
+        ).filter(
+            Q(company_code=scope) | Q(department=scope)
+        ).first()
+
+        if member is None:
             return Response({'error': 'Usuário não encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
         sector.members.remove(member)
@@ -759,7 +786,8 @@ def validate_insight(request, pk):
 def team_overview(request):
     if request.user.role != 'manager':
         return Response({'error': 'Acesso negado.'}, status=403)
-    if not request.user.department:
+    company_code = _normalize_company_code(request.user.company_code or request.user.department)
+    if not company_code:
         return Response({
             'averages': {
                 'avg_stress': None,
@@ -771,11 +799,13 @@ def team_overview(request):
             'team_members': [],
             'total_team_members': 0,
         })
-    company_code = _normalize_company_code(request.user.department)
     company_users = User.objects.filter(
         role__in=['employee', 'psychologist']
     )
-    company_users = [user for user in company_users if _normalize_company_code(user.department) == company_code]
+    company_users = [
+        user for user in company_users
+        if _normalize_company_code(user.company_code or user.department) == company_code
+    ]
     employees = [user for user in company_users if user.role == 'employee']
     agg = Assessment.objects.filter(employee__in=employees).aggregate(
         avg_stress=Avg('stress'),

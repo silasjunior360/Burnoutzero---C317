@@ -17,7 +17,7 @@ describe('API Axios Client Service', () => {
   });
 
   test('should create axios instance with default baseURL', () => {
-    expect(api.defaults.baseURL).toBe('http://localhost:8080/api/');
+    expect(api.defaults.baseURL).toBe('http://localhost:8000/api/');
   });
 
   test('should inject Bearer token into headers if access_token exists in localStorage', async () => {

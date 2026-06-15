@@ -3,7 +3,7 @@ import {
   Box, Typography, Grid, Paper, Chip, Card, CardContent,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
   Collapse, IconButton, TextField, Button, Checkbox, Tabs, Tab, MenuItem,
-  Dialog, DialogTitle, DialogContent, DialogActions
+  Dialog, DialogTitle, DialogContent, DialogActions, Alert
 } from '@mui/material';
 import WarningIcon from '@mui/icons-material/Warning';
 import GroupIcon from '@mui/icons-material/Group';
@@ -81,6 +81,8 @@ export default function Manager() {
   const [activeSectorTab, setActiveSectorTab] = useState<'unassigned' | 'sectors'>('unassigned');
   const [novoSetor, setNovoSetor] = useState('');
   const [createSectorDialogOpen, setCreateSectorDialogOpen] = useState(false);
+  const [createSectorMessage, setCreateSectorMessage] = useState('');
+  const [createSectorError, setCreateSectorError] = useState('');
   const [activeAlertsExpanded, setActiveAlertsExpanded] = useState(false);
   const [metricasSetores, setMetricasSetores] = useState<SetorMetric[]>([]);
 
@@ -145,6 +147,7 @@ export default function Manager() {
   const handleCreateSetor = async () => {
     const nome = novoSetor.trim();
     if (!nome) {
+      setCreateSectorError('Informe o nome do setor.');
       return;
     }
 
@@ -154,17 +157,25 @@ export default function Manager() {
       setNovoSetor('');
       setCreateSectorDialogOpen(false);
       setActiveSectorTab('sectors');
+      setCreateSectorError('');
+      setCreateSectorMessage(`Setor "${nome}" criado com sucesso.`);
     } catch (error) {
+      setCreateSectorMessage('');
+      setCreateSectorError('Não foi possível criar o setor. Verifique se o nome já existe ou tente novamente.');
       console.error(error);
     }
   };
 
   const handleOpenCreateSectorDialog = () => {
+    setCreateSectorError('');
+    setCreateSectorMessage('');
     setCreateSectorDialogOpen(true);
   };
 
   const handleCancelCreateSector = () => {
     setNovoSetor('');
+    setCreateSectorError('');
+    setCreateSectorMessage('');
     setCreateSectorDialogOpen(false);
   };
 
@@ -385,6 +396,18 @@ export default function Manager() {
                 Excluir selecionados
               </Button>
             </Box>
+
+            {createSectorMessage && (
+              <Alert severity="success" sx={{ mb: 2 }}>
+                {createSectorMessage}
+              </Alert>
+            )}
+
+            {createSectorError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {createSectorError}
+              </Alert>
+            )}
 
             <Tabs
               value={activeSectorTab}

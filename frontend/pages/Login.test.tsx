@@ -56,13 +56,13 @@ describe('Login Page', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByPlaceholderText('seu@exemplo.com'), { target: { value: 'user1' } });
+    fireEvent.change(screen.getByPlaceholderText('seu@exemplo.com'), { target: { value: 'user1@email.com' } });
     fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'pass123' } });
     fireEvent.submit(screen.getByRole('button', { name: /Entrar/i }).closest('form')!);
 
     await waitFor(() => {
       expect(api.post).toHaveBeenCalledWith('/auth/login/', {
-        username: 'user1',
+        username: 'user1@email.com',
         password: 'pass123'
       });
       expect(localStorage.getItem('access_token')).toBe('fake-access-token');
@@ -84,7 +84,7 @@ describe('Login Page', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByPlaceholderText('seu@exemplo.com'), { target: { value: 'psico' } });
+    fireEvent.change(screen.getByPlaceholderText('seu@exemplo.com'), { target: { value: 'psico@email.com' } });
     fireEvent.change(screen.getByPlaceholderText('••••••••'), { target: { value: 'pass' } });
     fireEvent.submit(screen.getByRole('button', { name: /Entrar/i }).closest('form')!);
 
@@ -104,11 +104,11 @@ describe('Login Page', () => {
       </MemoryRouter>
     );
 
-    fireEvent.change(screen.getByPlaceholderText('seu@exemplo.com'), { target: { value: 'wrong' } });
+    fireEvent.change(screen.getByPlaceholderText('seu@exemplo.com'), { target: { value: 'wrong@email.com' } });
     fireEvent.submit(screen.getByRole('button', { name: /Entrar/i }).closest('form')!);
 
     await waitFor(() => {
-      expect(screen.getByText(/Email ou senha inválidos/i)).toBeInTheDocument();
+      expect(screen.getByText(/E-mail ou senha inválidos/i)).toBeInTheDocument();
     }, { timeout: 3000 });
   });
 });

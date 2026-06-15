@@ -1,7 +1,19 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from .models import User, Assessment, FollowUp, Appointment, Sector, GamificationState
+
+
+class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        email = str(attrs.get('username', '')).strip()
+        if email:
+            user = User.objects.filter(email__iexact=email).first()
+            if user is not None:
+                attrs['username'] = user.get_username()
+
+        return super().validate(attrs)
 
 
 class UserSerializer(serializers.ModelSerializer):

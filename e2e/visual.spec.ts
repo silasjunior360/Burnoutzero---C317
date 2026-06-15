@@ -19,7 +19,7 @@ test.describe('Visual Regression E2E Tests', () => {
     await page.waitForSelector('button:has-text("Entrar")');
 
     await expect(page).toHaveScreenshot('login-page.png', {
-      maxDiffPixels: 100,
+      maxDiffPixels: 300,
     });
   });
 

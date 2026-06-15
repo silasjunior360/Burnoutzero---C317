@@ -1,5 +1,5 @@
 // frontend/components/Header.tsx
-import { 
+import {
   AppBar, Toolbar, Typography, Box, Container, IconButton, Menu, MenuItem, Avatar, Divider
 } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -13,67 +13,55 @@ export default function Header() {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [userName, setUserName] = useState('');
   const [userRole, setUserRole] = useState<string | null>(null);
-
   const [userAvatar, setUserAvatar] = useState('');
 
-  const getUserDashboardRoute = () => {
+  const getNormalizedRole = () => {
     const roleRaw = (userRole || localStorage.getItem('user_role') || '').toString();
-    const normalizedRole = roleRaw
+    return roleRaw
       .normalize('NFD')
       .replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .trim();
+  };
 
-    if (normalizedRole.includes('manager') || normalizedRole.includes('gestor') || normalizedRole.includes('gerente')) {
-      return '/manager';
-    }
+  const isEmployeeRole = getNormalizedRole() === 'employee';
+  const isPsychologistRole = getNormalizedRole().includes('psychologist') || getNormalizedRole().includes('psicologo') || getNormalizedRole().includes('psicologa');
+  const isManagerRole = getNormalizedRole().includes('manager') || getNormalizedRole().includes('gestor') || getNormalizedRole().includes('gerente');
+  const isAuthPage = ['/login', '/register', '/'].includes(location.pathname);
+  const showNavigation = !isAuthPage;
 
-    if (normalizedRole.includes('psychologist') || normalizedRole.includes('psicologo') || normalizedRole.includes('psicologa')) {
-      return '/psychologist';
-    }
-
+  const getUserDashboardRoute = () => {
+    if (isManagerRole) return '/manager';
+    if (isPsychologistRole) return '/psychologist';
     return '/employee';
   };
 
   const handleLogoClick = () => {
-    const currentPath = location.pathname;
-
-    if (currentPath === '/register') {
+    if (location.pathname === '/register') {
       navigate('/login');
       return;
     }
 
-    if (currentPath === '/login' || currentPath === '/') {
+    if (location.pathname === '/login' || location.pathname === '/') {
       navigate('/');
       return;
     }
 
-    if (currentPath === '/employee' || currentPath === '/psychologist' || currentPath === '/manager') {
-      navigate(currentPath);
-      return;
-    }
-
-    if (currentPath === '/home' || currentPath === '/settings') {
-      navigate(getUserDashboardRoute());
-      return;
-    }
-
-    navigate('/');
+    navigate(getUserDashboardRoute());
   };
 
   const loadUserProfile = () => {
     import('../services/api').then(({ default: api }) => {
-      if (!api || !api.get) {
-        return;
-      }
+      if (!api || !api.get) return;
+
       api.get('/users/me/').then((res) => {
-        const d = res.data || {};
-        const name = (d.first_name || d.username || d.email || 'Usuário') + (d.last_name ? ' ' + d.last_name : '');
+        const data = res.data || {};
+        const name = (data.first_name || data.username || data.email || 'Usuário') + (data.last_name ? ` ${data.last_name}` : '');
         setUserName(name);
-        setUserRole(d.role || null);
-        setUserAvatar(d.avatar || '');
+        setUserRole(data.role || null);
+        setUserAvatar(data.avatar || '');
       }).catch(() => {
-        // ignore - keep defaults
+        // keep defaults
       });
     }).catch(() => {
       // ignore import errors
@@ -102,7 +90,6 @@ export default function Header() {
       window.removeEventListener('user-profile-updated', handleProfileUpdated);
     };
   }, [location.pathname]);
-  const isAuthPage = ['/login', '/register', '/'].includes(location.pathname);
 
   const handleOpenUserMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
@@ -128,13 +115,11 @@ export default function Header() {
     <AppBar position="sticky" color="default" elevation={1} sx={{ backgroundColor: 'background.paper' }}>
       <Container maxWidth="lg">
         <Toolbar disableGutters>
-          {/* Logo e Home */}
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexGrow: 1 }}>
-            {/* Logo */}
             <Typography
               variant="h6"
               component="div"
-              sx={{ 
+              sx={{
                 cursor: 'pointer',
                 background: 'linear-gradient(135deg, #147DAC 0%, #AE45AF 100%)',
                 WebkitBackgroundClip: 'text',
@@ -146,12 +131,10 @@ export default function Header() {
               Burnoutzero
             </Typography>
 
-            {!isAuthPage && userRole !== null && userRole !== 'manager' && (
+            {showNavigation && isEmployeeRole && (
               <>
-                {/* Divider */}
                 <Divider orientation="vertical" flexItem sx={{ my: 1 }} />
 
-                {/* Home Button */}
                 <Box
                   component="button"
                   onClick={() => navigate('/home')}
@@ -170,9 +153,9 @@ export default function Header() {
                     }
                   }}
                 >
-                  <img 
-                    src="/favicon.svg" 
-                    alt="Home" 
+                  <img
+                    src="/favicon.svg"
+                    alt="Home"
                     style={{ width: '24px', height: '24px' }}
                   />
                   <Box
@@ -191,42 +174,65 @@ export default function Header() {
             )}
           </Box>
 
-          {!isAuthPage && userRole !== null && userRole !== 'manager'  && (
+          {showNavigation && (
             <>
-              {/* Menu de Usuário */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <IconButton 
-                  onClick={handleOpenUserMenu}
-                  sx={{ p: 0 }}
-                  size="large"
-                >
-
-                  <Avatar src={userAvatar || undefined} sx={{ width: 40, height: 40, bgcolor: 'primary.main', cursor: 'pointer' }}>
-
-                    {userName.split(' ').map(n => n[0]).join('')}
-                  </Avatar>
-                </IconButton>
-                <Menu
-                  anchorEl={anchorEl}
-                  open={Boolean(anchorEl)}
-                  onClose={handleCloseUserMenu}
-                  anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                  transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-                >
-                  <MenuItem disabled sx={{ opacity: 0.6 }}>
-                    <Typography variant="body2">{userName}</Typography>
-                  </MenuItem>
-                  <Divider />
-                  <MenuItem onClick={handleSettings}>
-                    <SettingsIcon sx={{ mr: 2 }} fontSize="small" />
-                    Configurações
-                  </MenuItem>
-                  <MenuItem onClick={handleLogout}>
-                    <LogoutIcon sx={{ mr: 2 }} fontSize="small" />
-                    Sair
-                  </MenuItem>
-                </Menu>
-              </Box>
+              {isEmployeeRole ? (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }} size="large">
+                    <Avatar src={userAvatar || undefined} sx={{ width: 40, height: 40, bgcolor: 'primary.main', cursor: 'pointer' }}>
+                      {userName.split(' ').map((n) => n[0]).join('')}
+                    </Avatar>
+                  </IconButton>
+                  <Menu
+                    anchorEl={anchorEl}
+                    open={Boolean(anchorEl)}
+                    onClose={handleCloseUserMenu}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                  >
+                    <MenuItem disabled sx={{ opacity: 0.6 }}>
+                      <Typography variant="body2">{userName}</Typography>
+                    </MenuItem>
+                    <Divider />
+                    <MenuItem onClick={handleSettings}>
+                      <SettingsIcon sx={{ mr: 2 }} fontSize="small" />
+                      Configurações
+                    </MenuItem>
+                    <MenuItem onClick={handleLogout}>
+                      <LogoutIcon sx={{ mr: 2 }} fontSize="small" />
+                      Sair
+                    </MenuItem>
+                  </Menu>
+                </Box>
+              ) : (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <IconButton onClick={handleOpenUserMenu} sx={{ p: 0 }} size="large" aria-label="abrir perfil do usuário">
+                    <Avatar src={userAvatar || undefined} sx={{ width: 40, height: 40, bgcolor: 'primary.main', cursor: 'pointer' }}>
+                      {userName.split(' ').map((n) => n[0]).join('')}
+                    </Avatar>
+                  </IconButton>
+                  <Menu
+                    anchorEl={anchorEl}
+                    open={Boolean(anchorEl)}
+                    onClose={handleCloseUserMenu}
+                    anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                    transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+                  >
+                    <MenuItem disabled sx={{ opacity: 0.6 }}>
+                      <Typography variant="body2">{userName}</Typography>
+                    </MenuItem>
+                    <Divider />
+                    <MenuItem onClick={handleSettings}>
+                      <SettingsIcon sx={{ mr: 2 }} fontSize="small" />
+                      Configurações
+                    </MenuItem>
+                    <MenuItem onClick={handleLogout}>
+                      <LogoutIcon sx={{ mr: 2 }} fontSize="small" />
+                      Sair
+                    </MenuItem>
+                  </Menu>
+                </Box>
+              )}
             </>
           )}
         </Toolbar>

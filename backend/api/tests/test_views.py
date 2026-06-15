@@ -71,6 +71,39 @@ class ApiViewsTestCase(APITestCase):
         self.assertIn('joaohumberto', usernames)
         self.assertNotIn('fora_da_empresa', usernames)
 
+    def test_team_overview_uses_company_code_and_unassigned_member_list(self):
+        manager = User.objects.create_user(
+            username='gestor_empresa',
+            password='password',
+            role='manager',
+            company_code='123123',
+        )
+        employee_same_code = User.objects.create_user(
+            username='funcionario_mesmo_codigo',
+            password='password',
+            role='employee',
+            company_code='123123',
+        )
+        User.objects.create_user(
+            username='funcionario_outro_codigo',
+            password='password',
+            role='employee',
+            company_code='999999',
+        )
+
+        self.client.force_authenticate(user=manager)
+
+        response = self.client.get(reverse('team_overview'))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        usernames = [member['username'] for member in response.data['team_members']]
+        self.assertIn(employee_same_code.username, usernames)
+        self.assertNotIn('funcionario_outro_codigo', usernames)
+
+        sectors_response = self.client.get(reverse('manager-sectors-list'))
+        self.assertEqual(sectors_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(sectors_response.data, [])
+
     def test_appointment(self):
         self.client.force_authenticate(user=self.employee)
         response = self.client.post(reverse('appointment-list'), {
@@ -223,16 +256,16 @@ class ApiProfileSettingsTestCase(APITestCase):
 class ApiManagerSectorsTestCase(APITestCase):
     def setUp(self):
         self.employee_low = User.objects.create_user(
-            username='func_baixo', password='password', role='employee', department='TI'
+            username='func_baixo', password='password', role='employee', company_code='ti'
         )
         self.employee_high = User.objects.create_user(
-            username='func_alto', password='password', role='employee', department='TI'
+            username='func_alto', password='password', role='employee', company_code='ti'
         )
         self.manager = User.objects.create_user(
-            username='gestor_ti', password='password', role='manager', department='TI'
+            username='gestor_ti', password='password', role='manager', company_code='ti'
         )
         self.psychologist = User.objects.create_user(
-            username='psico_ti', password='password', role='psychologist', department='TI'
+            username='psico_ti', password='password', role='psychologist', company_code='ti'
         )
 
         Assessment.objects.create(
@@ -267,9 +300,9 @@ class ApiManagerSectorsTestCase(APITestCase):
     def test_manager_sectors_api(self):
         self.client.force_authenticate(user=self.manager)
 
-        stable_sector = Sector.objects.create(department='TI', name='Administrativo')
-        under_observation_sector = Sector.objects.create(department='TI', name='Projetos')
-        high_risk_sector = Sector.objects.create(department='TI', name='Operações')
+        stable_sector = Sector.objects.create(company_code='ti', department='TI', name='Administrativo')
+        under_observation_sector = Sector.objects.create(company_code='ti', department='TI', name='Projetos')
+        high_risk_sector = Sector.objects.create(company_code='ti', department='TI', name='Operações')
 
         stable_sector.members.add(self.employee_low)
         high_risk_sector.members.add(self.employee_high)
@@ -309,12 +342,48 @@ class ApiManagerSectorsTestCase(APITestCase):
         )
         self.assertEqual(remove_response.status_code, status.HTTP_200_OK)
 
-        for sector_id in Sector.objects.filter(department='TI').values_list('id', flat=True):
+        for sector_id in Sector.objects.filter(company_code='ti').values_list('id', flat=True):
             self.client.delete(reverse('manager-sectors-detail', args=[sector_id]))
 
         empty_response = self.client.get(reverse('manager-sectors-list'))
         self.assertEqual(empty_response.status_code, status.HTTP_200_OK)
         self.assertEqual(empty_response.data, [])
+
+    def test_manager_sectors_api_uses_company_code_scope(self):
+        manager = User.objects.create_user(
+            username='gestor_empresa',
+            password='password',
+            role='manager',
+            company_code='EMPRESA-ALFA ',
+        )
+        User.objects.create_user(
+            username='emp_empresa',
+            password='password',
+            role='employee',
+            company_code='EMPRESA-ALFA',
+        )
+        User.objects.create_user(
+            username='emp_fora',
+            password='password',
+            role='employee',
+            company_code='EMPRESA-BETA',
+        )
+
+        self.client.force_authenticate(user=manager)
+
+        create_response = self.client.post(
+            reverse('manager-sectors-list'),
+            {'setor': 'Operações'},
+            format='json'
+        )
+        self.assertEqual(create_response.status_code, status.HTTP_201_CREATED)
+
+        list_response = self.client.get(reverse('manager-sectors-list'))
+        self.assertEqual(list_response.status_code, status.HTTP_200_OK)
+        sector_names = [item['setor'] for item in list_response.data]
+        self.assertIn('Operações', sector_names)
+        self.assertEqual(len(list_response.data), 1)
+        self.assertEqual(Sector.objects.get(name='Operações').company_code, 'empresa-alfa')
 
 
 class ApiGamificationStateTestCase(APITestCase):

@@ -140,7 +140,7 @@ test.describe('Manager Dashboard E2E', () => {
 
     // Confirm new sector in table
     await page.click('button:has-text("Setores")');
-    await expect(page.locator('text=Marketing')).toBeVisible();
+    await expect(page.getByText('Marketing', { exact: true })).toBeVisible();
   });
 
   test('should assign an unassigned member to a sector', async ({ page }) => {

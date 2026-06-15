@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import (
-    TokenObtainPairView, TokenRefreshView
+    TokenRefreshView
 )
 from .views import (
     InsightViewSet, RegisterView, UserDetailView,
@@ -10,7 +10,7 @@ from .views import (
     SectorViewSet,
     validate_insight, team_overview, my_points,
     gamification_me, award_gamification_points,
-    UserPasswordChangeView
+    UserPasswordChangeView, EmailTokenObtainPairView
 )
 
 router = DefaultRouter()
@@ -31,7 +31,7 @@ router.register(r'manager/sectors', SectorViewSet, basename='manager-sectors')
 urlpatterns = [
     path(
         'auth/login/',
-        TokenObtainPairView.as_view(),
+        EmailTokenObtainPairView.as_view(),
         name='token_obtain_pair'
     ),
     path(

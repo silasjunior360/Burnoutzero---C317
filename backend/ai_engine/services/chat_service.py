@@ -12,6 +12,7 @@ SYSTEM_BY_ROLE = {
     'manager': MANAGER_PROMPT,
 }
 
+
 class ChatService:
     def __init__(self, user, session_id=None):
         self.user = user

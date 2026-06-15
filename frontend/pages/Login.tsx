@@ -77,7 +77,6 @@ export default function Login() {
 
     try {
       const response = await api.post('/auth/login/', {
-        // backend expects `username`; we allow users to enter email here
         username: email,
         password: password
       });
@@ -131,7 +130,7 @@ export default function Login() {
     } catch (err) {
       const axiosError = err as { response?: { status: number } };
       if (axiosError.response && axiosError.response.status === 401) {
-        setError('Email ou senha inválidos');
+        setError('E-mail ou senha inválidos');
       } else {
         setError('Ocorreu um erro ao fazer login. Tente novamente.');
       }
@@ -177,7 +176,7 @@ export default function Login() {
           <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label="Email"
+              label="E-mail"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}

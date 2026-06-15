@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -12,6 +12,7 @@ import {
   Chip,
   Divider,
   Paper,
+  TextField,
   Dialog,
   DialogTitle,
   DialogContent,
@@ -118,19 +119,14 @@ const getXpNextLevel = (totalXp: number) => {
   return getXpRequiredForNextLevel(level);
 };
 
-const WORD_INTERVAL_MS = testTiming(60 * 60 * 1000);
-const DAILY_WORDS = [
-  'calma',
-  'foco',
-  'pausa',
-  'respirar',
-  'equilíbrio',
-  'presença',
-  'silêncio',
-  'leveza',
-  'cuidado',
-  'ritmo'
+const WORD_POOL = [
+  'céu', 'azul', 'avião', 'verde', 'torre', 'nuvem', 'sol', 'mar',
+  'rio', 'vento', 'pedra', 'fogo', 'gelo', 'casa', 'porta', 'janela',
+  'luz', 'sombra', 'raiz', 'flor'
 ];
+
+const ORDINALS = ['primeira', 'segunda', 'terceira', 'quarta', 'quinta'];
+const WORD_INTERVAL_MS = testTiming(50 * 60 * 1000);
 
 const moodOptions = [
   { label: 'Muito mal', icon: '😣' },
@@ -252,7 +248,7 @@ const getYesterdayKey = () => {
   return getLocalDateKey(yesterday);
 };
 
-const randomWord = () => DAILY_WORDS[Math.floor(Math.random() * DAILY_WORDS.length)];
+const randomWord = () => WORD_POOL[Math.floor(Math.random() * WORD_POOL.length)];
 
 const readStorage = <T,>(key: string, fallback: T): T => {
   if (typeof window === 'undefined') {
@@ -498,11 +494,23 @@ const BreathingExercise = ({ onComplete }: { onComplete: (xp: number) => void })
   const currentPhaseInfo = phases[currentPhase];
 
   return (
-    <Card sx={{ mb: 3, borderRadius: 2, overflow: 'hidden' }}>
+    <Paper
+        variant="outlined"
+        sx={{
+          mb: 3,
+          p: 2,
+          borderRadius: 2,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden'
+        }}
+      >
+    
       <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            RESPIRAÇÃO GUIADA
+            Respiração Guiada
           </Typography>
         </Box>
       </Box>
@@ -572,7 +580,7 @@ const BreathingExercise = ({ onComplete }: { onComplete: (xp: number) => void })
           </Box>
         )}
       </CardContent>
-    </Card>
+    </Paper>
   );
 };
 
@@ -595,6 +603,16 @@ const DailyWordsMission = ({ onCompleteXp }: { onCompleteXp: (xp: number) => voi
 
   const { collectedWords, currentWord, nextWordAt, completed, xpAwarded } = state;
   const [currentTime, setCurrentTime] = useState(() => Date.now());
+  const [challengeIndex, setChallengeIndex] = useState<number | null>(null);
+  const [answer, setAnswer] = useState('');
+  const [result, setResult] = useState<'correct' | 'wrong' | null>(null);
+  const [wrongWord, setWrongWord] = useState('');
+
+  const pickWord = useCallback((collected: string[]) => {
+    const usedWords = new Set(collected);
+    const availableWords = WORD_POOL.filter((word) => !usedWords.has(word));
+    return availableWords[Math.floor(Math.random() * availableWords.length)] || randomWord();
+  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -603,13 +621,13 @@ const DailyWordsMission = ({ onCompleteXp }: { onCompleteXp: (xp: number) => voi
       
       setState(prev => {
         if (!prev.completed && !prev.currentWord && now >= prev.nextWordAt) {
-          return { ...prev, currentWord: randomWord() };
+          return { ...prev, currentWord: pickWord(prev.collectedWords) };
         }
         return prev;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [pickWord]);
 
   useEffect(() => {
     writeStorage(STORAGE_KEY, state);
@@ -623,6 +641,7 @@ const DailyWordsMission = ({ onCompleteXp }: { onCompleteXp: (xp: number) => voi
 
     const nextCollected = [...collectedWords, currentWord];
     const isFinished = nextCollected.length >= 5;
+    const nextChallengeIndex = isFinished ? Math.floor(Math.random() * 5) : null;
 
     setState(prev => ({
       ...prev,
@@ -633,72 +652,154 @@ const DailyWordsMission = ({ onCompleteXp }: { onCompleteXp: (xp: number) => voi
       xpAwarded: (isFinished && !prev.xpAwarded) ? true : prev.xpAwarded
     }));
 
+    setAnswer('');
+    setResult(null);
+    setWrongWord('');
+    setChallengeIndex(nextChallengeIndex);
+
     if (isFinished && !xpAwarded) {
       onCompleteXp(75);
     }
   };
 
+  const handleCheckAnswer = () => {
+    if (challengeIndex === null) {
+      return;
+    }
+
+    const correctWord = collectedWords[challengeIndex];
+    if (answer.trim().toLowerCase() === correctWord.toLowerCase()) {
+      setResult('correct');
+      return;
+    }
+
+    setResult('wrong');
+    setWrongWord(correctWord);
+  };
+
   const remainingMs = Math.max(0, nextWordAt - currentTime);
   const progress = (collectedWords.length / 5) * 100;
+  const timerLabel = currentWord
+    ? 'agora'
+    : `${Math.floor(remainingMs / 60000)}:${String(Math.ceil((remainingMs % 60000) / 1000)).padStart(2, '0')}`;
 
   return (
-    <Card sx={{ mb: 3, borderRadius: 2 }}>
-      <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Missão Diária: Palavras
-          </Typography>
-        </Box>
-      </Box>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
-          <Box sx={{ flex: 1 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-              {collectedWords.length} / 5 palavras
+    <Paper
+          variant="outlined"
+          sx={{
+            mb: 3,
+            p: 2,
+            borderRadius: 2,
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}
+        >
+          <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+              Decorar Palavras
             </Typography>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
-              Anote a palavra atual e junte 5 em ordem para concluir a missão.
-            </Typography>
-            <Box sx={{ mt: 2 }}>
-              <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: 2 }} />
+          </Box>
+    
+          <CardContent>
+            {/* Progress row */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                  {collectedWords.length} / 5 palavras
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>
+                  Anote a palavra atual e junte 5 em ordem para concluir a missão.
+                </Typography>
+                <Box sx={{ mt: 2 }}>
+                  <LinearProgress variant="determinate" value={progress} sx={{ height: 8, borderRadius: 2 }} />
+                </Box>
+    
+                {/* Collected word chips */}
+                
+              </Box>
+    
+              <Box sx={{ textAlign: 'center' }}>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  Próxima palavra em
+                </Typography>
+                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+                  {timerLabel}
+                </Typography>
+                <Button
+                  variant="contained"
+                  onClick={handleRecordWord}
+                  disabled={!currentWord || completed}
+                  sx={{ borderRadius: 2, mt: 1 }}
+                >
+                  Registrar palavra
+                </Button>
+              </Box>
             </Box>
-          </Box>
-          <Box sx={{ textAlign: 'center' }}>
-            <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-              Próxima palavra em
-            </Typography>
-            <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-              {currentWord ? 'agora' : `${Math.floor(remainingMs / 60000)}:${String(Math.ceil((remainingMs % 60000) / 1000)).padStart(2, '0')}`}
-            </Typography>
-            <Button
-              variant="contained"
-              onClick={handleRecordWord}
-              disabled={!currentWord || completed}
-              sx={{ borderRadius: 2, mt: 1 }}
-            >
-              Registrar palavra
-            </Button>
-          </Box>
-        </Box>
-
-        <Box sx={{ p: 2, bgcolor: 'background.paper', borderRadius: 1, mb: 2 }}>
-          <Typography variant="body2" color="text.secondary">
-            Palavra atual
-          </Typography>
-          <Typography variant="h5" sx={{ fontWeight: 700, mt: 0.5 }}>
-            {currentWord ?? 'Palavra registrada'}
-          </Typography>
-        </Box>
-
-        {completed && (
-          <Box sx={{ mt: 2, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
-            <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
-              ✓ Missão concluída — +75 XP
-            </Typography>
-          </Box>
-        )}
-      </CardContent>
-    </Card>
+    
+            {/* Current word box */}
+            <Box sx={{ p: 2, bgcolor: 'background.paper', border: '1px solid', borderColor: 'divider', borderRadius: 1, mb: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Palavra atual
+              </Typography>
+              <Typography variant="h5" sx={{ fontWeight: 700, mt: 0.5 }}>
+                {currentWord ?? (completed ? 'Missão encerrada' : 'Palavra registrada')}
+              </Typography>
+            </Box>
+    
+            {/* Challenge section */}
+            {completed && challengeIndex !== null && (
+              <Box sx={{ mt: 2, p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 2 }}>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                  Teste de memória
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 600, mb: 2 }}>
+                  Qual foi a palavra que apareceu em{' '}
+                  <Box component="span" sx={{ color: 'warning.main' }}>
+                    {ORDINALS[challengeIndex]}
+                  </Box>{' '}
+                  lugar?
+                </Typography>
+    
+                <TextField
+                  fullWidth
+                  size="small"
+                  placeholder="Digite a palavra..."
+                  value={answer}
+                  onChange={e => { setAnswer(e.target.value); setResult(null); }}
+                  disabled={result === 'correct'}
+                  sx={{ mb: 1.5 }}
+                />
+    
+                <Button
+                  variant="contained"
+                  onClick={handleCheckAnswer}
+                  disabled={!answer.trim() || result === 'correct'}
+                  sx={{ borderRadius: 2 }}
+                >
+                  Confirmar
+                </Button>
+    
+                {result === 'correct' && (
+                  <Box sx={{ mt: 2, p: 2, bgcolor: 'success.light', borderRadius: 1 }}>
+                    <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
+                      ✓ Correto! +75 XP conquistados.
+                    </Typography>
+                  </Box>
+                )}
+    
+                {result === 'wrong' && (
+                  <Box sx={{ mt: 2, p: 2, bgcolor: 'error.light', borderRadius: 1 }}>
+                    <Typography variant="body2" sx={{ color: 'white', fontWeight: 600 }}>
+                      ✗ Errado. A palavra correta era "{wrongWord}". Nenhum XP ganho.
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
+          </CardContent>
+        </Paper>
   );
 };
 
@@ -717,7 +818,6 @@ const MoodChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void })
   }));
 
   const { selectedMood, claimedDate, history } = state;
-  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     writeStorage(STORAGE_KEY, state);
@@ -763,55 +863,23 @@ const MoodChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void })
   };
   const weeklyCount = getWeeklyCount();
 
-  if (!isExpanded) {
-    return (
-      <Card
+  return (
+    <Paper
         variant="outlined"
-        onClick={() => setIsExpanded(true)}
         sx={{
           p: 2,
           borderRadius: 2,
-          bgcolor: 'background.paper',
-          mt: 2,
-          cursor: 'pointer',
-          minHeight: 140,
+          height: '100%',
           display: 'flex',
-          alignItems: 'center'
+          flexDirection: 'column'
         }}
       >
-        <Box sx={{ width: '100%' }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 0.5 }}>
-            Registrar humor diário
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            Clique para abrir as 5 reações e registrar seu estado.
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <Box>
-              <Typography variant="caption" color="text.secondary">
-                {claimedToday ? `Registrado hoje: ${selectedMood}` : '1 vez por dia • +50 XP'}
-              </Typography>
-              <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                Registros esta semana: {weeklyCount} / 7
-              </Typography>
-            </Box>
-            <Typography variant="h5">{selectedMood ? '✅' : '🙂'}</Typography>
-          </Box>
-        </Box>
-      </Card>
-    );
-  }
-
-  return (
-    <Card sx={{ mt: 2, borderRadius: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    
       <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
             Registrar humor diário
           </Typography>
-          <Button size="small" onClick={() => setIsExpanded(false)}>
-            Recolher
-          </Button>
         </Box>
       </Box>
       <CardContent sx={{ flex: 1 }}>
@@ -863,7 +931,8 @@ const MoodChallenge = ({ onCompleteXp }: { onCompleteXp: (xp: number) => void })
           </Typography>
         )}
       </CardContent>
-    </Card>
+    
+    </Paper>
   );
 };
 
@@ -1092,11 +1161,23 @@ const WaterChallenge = ({ onGainXp }: { onGainXp: (xp: number) => void }) => {
   const progress = (totalMl / TARGET_ML) * 100;
 
   return (
-    <Card sx={{ mb: 3, borderRadius: 2 }}>
+    <Paper
+        variant="outlined"
+        sx={{
+          mb: 3,
+          p: 2,
+          borderRadius: 2,
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+          overflow: 'hidden'
+        }}
+      >
       <Box sx={{ px: 3, py: 2, borderBottom: '1px solid', borderColor: 'divider' }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Typography variant="h6" sx={{ fontWeight: 600 }}>
-            Desafio: Beber Água (3L)
+            Beber Água (3L)
           </Typography>
         </Box>
       </Box>
@@ -1133,7 +1214,8 @@ const WaterChallenge = ({ onGainXp }: { onGainXp: (xp: number) => void }) => {
           </Typography>
         )}
       </CardContent>
-    </Card>
+    
+  </Paper>
   );
 };
 
