@@ -6,6 +6,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import SettingsIcon from '@mui/icons-material/Settings';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useEffect, useState } from 'react';
+import('../services/api')
 
 export default function Header() {
   const navigate = useNavigate();
@@ -51,18 +52,34 @@ export default function Header() {
   };
 
   const loadUserProfile = () => {
+    const token = localStorage.getItem('access_token');
+
+    if (!token || isAuthPage) {
+      setUserName('');
+      setUserRole(null);
+      setUserAvatar('');
+      return;
+    }
+
     import('../services/api').then(({ default: api }) => {
       if (!api || !api.get) return;
 
-      api.get('/users/me/').then((res) => {
-        const data = res.data || {};
-        const name = (data.first_name || data.username || data.email || 'Usuário') + (data.last_name ? ` ${data.last_name}` : '');
-        setUserName(name);
-        setUserRole(data.role || null);
-        setUserAvatar(data.avatar || '');
-      }).catch(() => {
-        // keep defaults
-      });
+      api.get('/users/me/')
+        .then((res) => {
+          const data = res.data || {};
+          const name =
+            (data.first_name || data.username || data.email || 'Usuário') +
+            (data.last_name ? ` ${data.last_name}` : '');
+
+          setUserName(name);
+          setUserRole(data.role || null);
+          setUserAvatar(data.avatar || '');
+        })
+        .catch(() => {
+          setUserName('');
+          setUserRole(null);
+          setUserAvatar('');
+        });
     }).catch(() => {
       // ignore import errors
     });
@@ -70,21 +87,37 @@ export default function Header() {
 
   useEffect(() => {
     let mounted = true;
+
+    if (isAuthPage || !localStorage.getItem('access_token')) {
+      setUserName('');
+      setUserRole(null);
+      setUserAvatar('');
+      return;
+    }
+
     loadUserProfile();
 
     const handleProfileUpdated = (event: Event) => {
       if (!mounted) return;
-      const customEvent = event as CustomEvent<{ avatar?: string; name?: string }>;
+
+      const customEvent = event as CustomEvent<{
+        avatar?: string;
+        name?: string;
+      }>;
+
       if (customEvent.detail?.name) {
         setUserName(customEvent.detail.name);
       }
+
       if (typeof customEvent.detail?.avatar === 'string') {
         setUserAvatar(customEvent.detail.avatar);
       }
+
       loadUserProfile();
     };
 
     window.addEventListener('user-profile-updated', handleProfileUpdated);
+
     return () => {
       mounted = false;
       window.removeEventListener('user-profile-updated', handleProfileUpdated);

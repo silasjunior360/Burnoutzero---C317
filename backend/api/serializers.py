@@ -2,8 +2,16 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from .models import User, Assessment, FollowUp, Appointment, Sector, GamificationState
-
+from .models import (
+    User,
+    Assessment,
+    FollowUp,
+    Appointment,
+    Insight,
+    Sector,
+    GamificationState,
+    PsychologistAvailability,
+)
 
 class EmailTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
@@ -26,6 +34,16 @@ class UserSerializer(serializers.ModelSerializer):
             'role', 'company_code', 'department'
         ]
         read_only_fields = ['id', 'role', 'department', 'company_code']
+
+
+class UserBasicSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = [
+            'id', 'username', 'email',
+            'first_name', 'last_name', 'avatar', 'role'
+        ]
+        read_only_fields = fields
 
 
 class UserCreateSerializer(serializers.ModelSerializer):
@@ -81,10 +99,37 @@ class FollowUpSerializer(serializers.ModelSerializer):
 
 
 class AppointmentSerializer(serializers.ModelSerializer):
+    employee = UserBasicSerializer(read_only=True)
+    psychologist = UserBasicSerializer(read_only=True)
+    availability_id = serializers.IntegerField(write_only=True, required=True)
+
     class Meta:
         model = Appointment
-        fields = '__all__'
-        read_only_fields = ['employee']
+        fields = [
+            'id',
+            'employee',
+            'psychologist',
+            'availability',
+            'availability_id',
+            'psychologist_name',
+            'date_time',
+            'status',
+            'created_at',
+        ]
+        read_only_fields = [
+            'id',
+            'employee',
+            'psychologist',
+            'availability',
+            'psychologist_name',
+            'date_time',
+            'status',
+            'created_at',
+        ]
+
+    def create(self, validated_data):
+        validated_data.pop('availability_id', None)
+        return super().create(validated_data)
 
 
 class SectorSerializer(serializers.ModelSerializer):
@@ -201,3 +246,74 @@ class SectorSerializer(serializers.ModelSerializer):
             if health == 'Ruim':
                 count += 1
         return count
+
+class PsychologistSerializer(serializers.ModelSerializer):
+    nome = serializers.SerializerMethodField()
+    especialidade = serializers.SerializerMethodField()
+    horarios = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'username',
+            'email',
+            'first_name',
+            'last_name',
+            'avatar',
+            'role',
+            'company_code',
+            'department',
+            'nome',
+            'especialidade',
+            'horarios',
+        ]
+
+    def get_nome(self, obj):
+        full_name = f'{obj.first_name or ""} {obj.last_name or ""}'.strip()
+        return full_name or obj.username
+
+    def get_especialidade(self, obj):
+        return obj.department or 'Psicologia'
+
+    def get_horarios(self, obj):
+        slots = PsychologistAvailability.objects.filter(
+            psychologist=obj,
+            status='available',
+            date_time__gte=timezone.now()
+        ).order_by('date_time')
+
+        return [
+            {
+                'id': slot.id,
+                'date_time': slot.date_time.isoformat(),
+                'label': timezone.localtime(slot.date_time).strftime('%d/%m/%Y %H:%M'),
+            }
+            for slot in slots
+        ]
+    
+class PsychologistAvailabilitySerializer(serializers.ModelSerializer):
+    label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PsychologistAvailability
+        fields = [
+            'id',
+            'psychologist',
+            'date_time',
+            'status',
+            'label',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = [
+            'id',
+            'psychologist',
+            'status',
+            'label',
+            'created_at',
+            'updated_at',
+        ]
+
+    def get_label(self, obj):
+        return timezone.localtime(obj.date_time).strftime('%d/%m/%Y %H:%M')

@@ -68,9 +68,52 @@ class FollowUp(models.Model):
     status = models.CharField(max_length=50, default='active')
 
 
+class PsychologistAvailability(models.Model):
+    STATUS_CHOICES = (
+        ('available', 'Available'),
+        ('booked', 'Booked'),
+        ('cancelled', 'Cancelled'),
+    )
+
+    psychologist = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='availabilities',
+    )
+    date_time = models.DateTimeField()
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default='available',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('psychologist', 'date_time')
+        ordering = ['date_time']
+
+    def __str__(self):
+        return f'{self.psychologist.username} - {self.date_time} - {self.status}'
+
+
 class Appointment(models.Model):
     employee = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name='appointments'
+    )
+    psychologist = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='psychologist_appointments',
+        null=True,
+        blank=True,
+    )
+    availability = models.OneToOneField(
+        PsychologistAvailability,
+        on_delete=models.SET_NULL,
+        related_name='appointment',
+        null=True,
+        blank=True,
     )
     psychologist_name = models.CharField(max_length=100)
     date_time = models.CharField(max_length=50)

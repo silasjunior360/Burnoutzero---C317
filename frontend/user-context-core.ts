@@ -3,6 +3,7 @@ import { createContext } from 'react';
 export type UserProfile = {
   id?: number;
   username?: string;
+  nome?: string;
   first_name?: string;
   last_name?: string;
   email?: string;
@@ -41,6 +42,7 @@ export const normalizeUser = (data: Record<string, unknown>): UserProfile => {
   const last_name = getStr(data.last_name);
   const email = getStr(data.email);
   const avatar = getStr(data.avatar);
+  const nome = getStr(data.nome) || [first_name, last_name].filter(Boolean).join(' ').trim() || username;
 
   const role = getStr(data.role || data.user_type || data.tipo || data.tipo_usuario || data.profile_type) || 'employee';
 
@@ -56,6 +58,7 @@ export const normalizeUser = (data: Record<string, unknown>): UserProfile => {
   return {
     ...data,
     username,
+    nome,
     first_name,
     last_name,
     email,

@@ -554,7 +554,7 @@ const BreathingExercise = ({ onComplete }: { onComplete: (xp: number) => void })
               <Typography variant="h6" sx={{ color: currentPhaseInfo.color }}>{phaseTime}s</Typography>
             </Box>
 
-            <Box>
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
               {!isActive ? (
                 <Button variant="contained" onClick={handleStart} sx={{ borderRadius: 3 }}>
                   Iniciar

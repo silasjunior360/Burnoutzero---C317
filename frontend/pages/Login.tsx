@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   Typography,
@@ -10,45 +10,47 @@ import {
   IconButton,
   Alert,
   Divider,
-  Container
-} from '@mui/material';
-import { useNavigate } from 'react-router-dom';
-import api from '../services/api';
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
-import EmailIcon from '@mui/icons-material/Email';
-import LockIcon from '@mui/icons-material/Lock';
+  Container,
+} from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import api from "../services/api";
+import Visibility from "@mui/icons-material/Visibility";
+import VisibilityOff from "@mui/icons-material/VisibilityOff";
+import EmailIcon from "@mui/icons-material/Email";
+import LockIcon from "@mui/icons-material/Lock";
+import { useUser } from "../use-user";
 
 const resolveHomeRouteFromRole = (role?: string): string => {
-  if (!role) return '/home';
+  if (!role) return "/home";
 
-  const normalized = (role || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+  const normalized = (role || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
 
-  if (normalized.includes('manager') || normalized.includes('gerente')) {
-    return '/manager';
+  if (normalized.includes("manager") || normalized.includes("gerente")) {
+    return "/manager";
   }
 
   if (
-    normalized.includes('psychologist') ||
-    normalized.includes('psicologo') ||
-    normalized.includes('psicologa')
+    normalized.includes("psychologist") ||
+    normalized.includes("psicologo") ||
+    normalized.includes("psicologa")
   ) {
-    return '/psychologist';
+    return "/psychologist";
   }
 
-  return '/home';
+  return "/home";
 };
 
 export default function Login() {
   const navigate = useNavigate();
+  const { updateUser } = useUser();
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
   type GamificationProfile = {
@@ -61,10 +63,28 @@ export default function Login() {
     level?: number;
   };
 
-  const readCachedCurrentUser = () => {
+  const readCachedCurrentUser = (username?: string) => {
     try {
-      const raw = localStorage.getItem('burnout-zero-current-user');
-      return raw ? (JSON.parse(raw) as { xp?: number; pontos?: number; diasAtivo?: number; level?: number }) : {};
+      const raw = localStorage.getItem("burnout-zero-current-user");
+      const cached = raw
+        ? (JSON.parse(raw) as {
+            username?: string;
+            xp?: number;
+            pontos?: number;
+            diasAtivo?: number;
+            level?: number;
+          })
+        : {};
+      const cachedUsername = (cached.username || "").trim().toLowerCase();
+      const currentUsername = (username || "").trim().toLowerCase();
+      if (
+        cachedUsername &&
+        currentUsername &&
+        cachedUsername !== currentUsername
+      ) {
+        return {};
+      }
+      return cached;
     } catch {
       return {};
     }
@@ -72,26 +92,26 @@ export default function Login() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     try {
-      const response = await api.post('/auth/login/', {
+      const response = await api.post("/auth/login/", {
         username: email,
-        password: password
+        password: password,
       });
-      
-      localStorage.setItem('access_token', response.data.access);
-      localStorage.setItem('refresh_token', response.data.refresh);
-      
-      const userResponse = await api.get('/users/me/');
+
+      localStorage.setItem("access_token", response.data.access);
+      localStorage.setItem("refresh_token", response.data.refresh);
+
+      const userResponse = await api.get("/users/me/");
       const userData = userResponse.data;
-      const cachedCurrentUser = readCachedCurrentUser();
+      const cachedCurrentUser = readCachedCurrentUser(userData.username);
       let gamificationProfile: GamificationProfile = {};
       let gamificationLoaded = false;
 
       try {
-        const gamificationResponse = await api.get('/gamification/me/');
+        const gamificationResponse = await api.get("/gamification/me/");
         gamificationProfile = gamificationResponse.data?.profile || {};
         gamificationLoaded = true;
       } catch {
@@ -99,40 +119,67 @@ export default function Login() {
       }
 
       const cachedXp = cachedCurrentUser.xp ?? cachedCurrentUser.pontos ?? 0;
-      const cachedPoints = cachedCurrentUser.pontos ?? cachedCurrentUser.xp ?? 0;
+      const cachedPoints =
+        cachedCurrentUser.pontos ?? cachedCurrentUser.xp ?? 0;
       const cachedDays = cachedCurrentUser.diasAtivo ?? 0;
       const cachedLevel = cachedCurrentUser.level ?? 1;
-      const resolvedXp = gamificationLoaded ? Math.max(gamificationProfile.xp ?? gamificationProfile.total_xp ?? 0, cachedXp) : cachedXp;
-      const resolvedPoints = gamificationLoaded ? Math.max(gamificationProfile.pontos ?? gamificationProfile.total_points ?? 0, cachedPoints) : cachedPoints;
-      const resolvedDays = gamificationLoaded ? Math.max(gamificationProfile.diasAtivo ?? gamificationProfile.streak_days ?? 0, cachedDays) : cachedDays;
-      const resolvedLevel = gamificationLoaded ? Math.max(gamificationProfile.level ?? 1, cachedLevel) : cachedLevel;
+      const resolvedXp = gamificationLoaded
+        ? Math.max(
+            gamificationProfile.xp ?? gamificationProfile.total_xp ?? 0,
+            cachedXp,
+          )
+        : cachedXp;
+      const resolvedPoints = gamificationLoaded
+        ? Math.max(
+            gamificationProfile.pontos ?? gamificationProfile.total_points ?? 0,
+            cachedPoints,
+          )
+        : cachedPoints;
+      const resolvedDays = gamificationLoaded
+        ? Math.max(
+            gamificationProfile.diasAtivo ??
+              gamificationProfile.streak_days ??
+              0,
+            cachedDays,
+          )
+        : cachedDays;
+      const resolvedLevel = gamificationLoaded
+        ? Math.max(gamificationProfile.level ?? 1, cachedLevel)
+        : cachedLevel;
+
+      const nextUser = {
+        username: userData.username || email,
+        nome:
+          userData.nome ||
+          `${userData.first_name || ""} ${userData.last_name || ""}`.trim(),
+        first_name: userData.first_name || "",
+        last_name: userData.last_name || "",
+        email: userData.email || "",
+        avatar: userData.avatar || "",
+        role: userData.role || "employee",
+        xp: resolvedXp,
+        total_pontos: resolvedPoints,
+        pontos: resolvedPoints,
+        dias_ativo: resolvedDays,
+        level: resolvedLevel,
+      };
 
       localStorage.setItem(
-        'burnout-zero-current-user',
-        JSON.stringify({
-          username: userData.username || email,
-          first_name: userData.first_name || '',
-          last_name: userData.last_name || '',
-          email: userData.email || '',
-          avatar: userData.avatar || '',
-          role: userData.role || 'employee',
-          xp: resolvedXp,
-          pontos: resolvedPoints,
-          diasAtivo: resolvedDays,
-          level: resolvedLevel
-        })
+        "burnout-zero-current-user",
+        JSON.stringify(nextUser),
       );
-      
-      localStorage.setItem('user_role', userData.role || 'employee');
-      
+      localStorage.setItem("burnout-zero-user", JSON.stringify(nextUser));
+      localStorage.setItem("user_role", userData.role || "employee");
+      updateUser(nextUser);
+
       const targetRoute = resolveHomeRouteFromRole(userData.role);
       navigate(targetRoute);
     } catch (err) {
       const axiosError = err as { response?: { status: number } };
       if (axiosError.response && axiosError.response.status === 401) {
-        setError('E-mail ou senha inválidos');
+        setError("E-mail ou senha inválidos");
       } else {
-        setError('Ocorreu um erro ao fazer login. Tente novamente.');
+        setError("Ocorreu um erro ao fazer login. Tente novamente.");
       }
     } finally {
       setLoading(false);
@@ -143,20 +190,19 @@ export default function Login() {
     <Container maxWidth="sm">
       <Box sx={{ py: 8 }}>
         <Paper elevation={3} sx={{ p: 4, borderRadius: 3 }}>
-          {/* Logo e Título */}
-          <Box sx={{ textAlign: 'center', mb: 4 }}>
-            <img 
-              src="/favicon.svg" 
-              alt="Home" 
-              style={{ width: '60px', height: '60px', marginBottom: '16px' }}
+          <Box sx={{ textAlign: "center", mb: 4 }}>
+            <img
+              src="/favicon.svg"
+              alt="Home"
+              style={{ width: "60px", height: "60px", marginBottom: "16px" }}
             />
             <Typography
               variant="h4"
-              sx={{ 
-                cursor: 'pointer',
-                background: 'linear-gradient(135deg, #147DAC 0%, #AE45AF 100%)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent',
+              sx={{
+                cursor: "pointer",
+                background: "linear-gradient(135deg, #147DAC 0%, #AE45AF 100%)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
                 fontWeight: 700,
               }}
             >
@@ -195,7 +241,7 @@ export default function Login() {
             <TextField
               fullWidth
               label="Senha"
-              type={showPassword ? 'text' : 'password'}
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               margin="normal"
@@ -212,7 +258,9 @@ export default function Login() {
                     <IconButton
                       onClick={() => setShowPassword(!showPassword)}
                       edge="end"
-                      aria-label={showPassword ? 'ocultar senha' : 'mostrar senha'}
+                      aria-label={
+                        showPassword ? "ocultar senha" : "mostrar senha"
+                      }
                     >
                       {showPassword ? <VisibilityOff /> : <Visibility />}
                     </IconButton>
@@ -229,14 +277,14 @@ export default function Login() {
               disabled={loading}
               sx={{ mt: 3, mb: 2, py: 1.5 }}
             >
-              {loading ? 'Entrando...' : 'Entrar'}
+              {loading ? "Entrando..." : "Entrar"}
             </Button>
 
-            <Box sx={{ textAlign: 'center', mt: 2 }}>
+            <Box sx={{ textAlign: "center", mt: 2 }}>
               <Link
                 component="button"
                 variant="body2"
-                onClick={() => navigate('/register')}
+                onClick={() => navigate("/register")}
                 underline="hover"
               >
                 Não tem uma conta? Cadastre-se
@@ -250,7 +298,14 @@ export default function Login() {
             </Typography>
           </Divider>
 
-          <Box sx={{ display: 'flex', justifyContent: 'center', gap: 2, flexWrap: 'wrap' }}>
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              gap: 2,
+              flexWrap: "wrap",
+            }}
+          >
             <Typography variant="caption" color="text.secondary">
               Funcionário
             </Typography>

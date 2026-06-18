@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box, Typography, Grid, Paper, Avatar, Chip, Card, CardContent, Button, TextField, Dialog,
   DialogTitle, DialogContent, DialogActions, Divider, LinearProgress,
   Tabs, Tab, Badge, IconButton, Tooltip, Alert, Snackbar, CircularProgress,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-  Skeleton,
+  Skeleton, ToggleButton, ToggleButtonGroup,
 } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import PeopleIcon from '@mui/icons-material/People';
@@ -80,6 +80,14 @@ interface DashboardStats {
   pending_insights: number;
 }
 
+interface AvailabilitySlot {
+  id: number;
+  date_time: string;
+  status: 'available' | 'booked' | 'cancelled';
+  label: string;
+}
+
+
 const getEmployeeId = (employee: EmployeeData): number => {
   if (typeof employee === 'number') return employee;
   return employee.id;
@@ -99,6 +107,66 @@ const getPatientUsername = (employee: EmployeeData): string => {
     return `ID: ${employee}`;
   }
   return employee.username;
+};
+
+const toArray = <T,>(data: unknown): T[] => {
+  if (Array.isArray(data)) return data as T[];
+
+  if (data && typeof data === 'object') {
+    const results = (data as { results?: unknown }).results;
+    if (Array.isArray(results)) return results as T[];
+  }
+
+  return [];
+};
+
+const normalizeAppointmentStatusToPatientStatus = (status: string): string => {
+  const normalized = status?.toLowerCase() || '';
+
+  if (normalized === 'cancelled' || normalized === 'cancelado') return 'cancelled';
+  if (normalized === 'completed' || normalized === 'concluído' || normalized === 'concluido') return 'completed';
+
+  return 'active';
+};
+
+const patientFromAppointment = (appointment: Appointment): Patient | null => {
+  if (!appointment.employee) return null;
+
+  return {
+    id: -Math.abs(appointment.id),
+    employee: appointment.employee,
+    date: appointment.created_at || appointment.date_time || new Date().toISOString(),
+    status: normalizeAppointmentStatusToPatientStatus(appointment.status),
+    private_notes: '',
+  };
+};
+
+const mergePatientsWithAppointmentEmployees = (
+  followUpPatients: Patient[],
+  appointments: Appointment[],
+): Patient[] => {
+  const patientsByEmployee = new Map<number, Patient>();
+
+  followUpPatients.forEach((patient) => {
+    patientsByEmployee.set(getEmployeeId(patient.employee), patient);
+  });
+
+  appointments
+    .filter((appointment) => {
+      const status = appointment.status?.toLowerCase() || '';
+      return status !== 'cancelled' && status !== 'cancelado';
+    })
+    .forEach((appointment) => {
+      const employeeId = getEmployeeId(appointment.employee);
+      if (patientsByEmployee.has(employeeId)) return;
+
+      const patient = patientFromAppointment(appointment);
+      if (patient) patientsByEmployee.set(employeeId, patient);
+    });
+
+  return Array.from(patientsByEmployee.values()).sort((a, b) =>
+    getPatientName(a.employee).localeCompare(getPatientName(b.employee), 'pt-BR'),
+  );
 };
 
 const getInitials = (name: string): string =>
@@ -479,11 +547,16 @@ export default function Psychologist() {
   const theme = useTheme();
 
   const [activeTab, setActiveTab] = useState(0);
+  const [calendarView, setCalendarView] = useState<'week' | 'month'>('week');
+  const [calendarDate, setCalendarDate] = useState(new Date());
 
   const [patients, setPatients] = useState<Patient[]>([]);
   const [allInsights, setAllInsights] = useState<Insight[]>([]);
   const [dashStats, setDashStats] = useState<DashboardStats | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
+  const [newAvailabilityDateTime, setNewAvailabilityDateTime] = useState('');
+  const availabilityInputRef = useRef<HTMLInputElement | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -502,16 +575,23 @@ export default function Psychologist() {
   const fetchData = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) setRefreshing(true);
     try {
-      const [patientsRes, insightsRes, statsRes, apptRes] = await Promise.all([
+      const [patientsRes, insightsRes, apptRes, availabilityRes] = await Promise.all([
         api.get('/follow-ups/').catch(() => ({ data: [] })),
         api.get('/insights/').catch(() => ({ data: [] })),
-        api.get('/psychologist/dashboard/').catch(() => ({ data: null })),
         api.get('/appointments/').catch(() => ({ data: [] })),
+        api.get('/psychologist/availability/').catch(() => ({ data: [] })),
       ]);
-      setPatients(patientsRes.data || []);
-      setAllInsights(insightsRes.data || []);
-      setDashStats(statsRes.data);
-      setAppointments(apptRes.data || []);
+
+      const followUpPatientsData = toArray<Patient>(patientsRes.data);
+      const appointmentsData = toArray<Appointment>(apptRes.data);
+      const insightsData = toArray<Insight>(insightsRes.data);
+      const availabilityData = toArray<AvailabilitySlot>(availabilityRes.data);
+
+      setPatients(mergePatientsWithAppointmentEmployees(followUpPatientsData, appointmentsData));
+      setAllInsights(insightsData);
+      setDashStats(null);
+      setAppointments(appointmentsData);
+      setAvailability(availabilityData);
     } catch (err) {
       console.error(err);
     } finally {
@@ -565,6 +645,56 @@ export default function Psychologist() {
     }
   };
 
+  const handleCreateAvailability = async () => {
+    if (!newAvailabilityDateTime) {
+      setSnackbar({
+        open: true,
+        message: 'Selecione uma data e horário para cadastrar.',
+        severity: 'error',
+      });
+      return;
+    }
+
+    try {
+      await api.post('/psychologist/availability/', {
+        date_time: newAvailabilityDateTime,
+      });
+
+      setNewAvailabilityDateTime('');
+      setSnackbar({
+        open: true,
+        message: 'Horário cadastrado com sucesso!',
+        severity: 'success',
+      });
+      void fetchData(true);
+    } catch {
+      setSnackbar({
+        open: true,
+        message: 'Erro ao cadastrar horário. Verifique se você está logada como psicóloga e se o horário ainda não foi cadastrado.',
+        severity: 'error',
+      });
+    }
+  };
+
+  const handleDeleteAvailability = async (id: number) => {
+    try {
+      await api.delete(`/psychologist/availability/${id}/`);
+
+      setSnackbar({
+        open: true,
+        message: 'Horário removido com sucesso!',
+        severity: 'success',
+      });
+      void fetchData(true);
+    } catch {
+      setSnackbar({
+        open: true,
+        message: 'Não foi possível remover este horário.',
+        severity: 'error',
+      });
+    }
+  };
+
   const totalPatients = dashStats?.total_patients ?? patients.length;
   const activePatients = dashStats?.active_patients ?? patients.filter(p => p.status === 'active' || p.status === 'ativo').length;
   const improvingCount = dashStats?.improving_count ?? 0;
@@ -612,6 +742,112 @@ export default function Psychologist() {
     { value: loading ? '—' : monthlyAppointments, label: 'Consultas este mês', sub: 'agendamentos', color: '#AE45AF' },
     { value: loading ? '—' : pendingInsightsCount, label: 'Insights pendentes', sub: 'aguardando validação', color: pendingInsightsCount > 0 ? '#f57c00' : '#2e7d32' },
   ];
+
+  const minAvailabilityDateTime = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+
+  const parseAppointmentDate = (dateTime: string): Date | null => {
+    if (!dateTime) return null;
+
+    const value = dateTime.trim();
+
+    const brMatch = value.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})/);
+    if (brMatch) {
+      const [, day, month, year, hour, minute] = brMatch;
+      return new Date(Number(year), Number(month) - 1, Number(day), Number(hour), Number(minute));
+    }
+
+    const isoLike = value.includes(' ') && /^\d{4}-\d{2}-\d{2}\s/.test(value)
+      ? value.replace(' ', 'T')
+      : value;
+
+    const parsed = new Date(isoLike);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+
+    const timeOnly = value.match(/^(\d{2}):(\d{2})$/);
+    if (timeOnly) {
+      const [, hour, minute] = timeOnly;
+      const today = new Date();
+      today.setHours(Number(hour), Number(minute), 0, 0);
+      return today;
+    }
+
+    return null;
+  };
+
+  const toDayKey = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const startOfWeek = (date: Date) => {
+    const result = new Date(date);
+    result.setHours(0, 0, 0, 0);
+    result.setDate(result.getDate() - result.getDay());
+    return result;
+  };
+
+  const addDays = (date: Date, days: number) => {
+    const result = new Date(date);
+    result.setDate(result.getDate() + days);
+    return result;
+  };
+
+  const addMonths = (date: Date, months: number) => {
+    const result = new Date(date);
+    result.setMonth(result.getMonth() + months);
+    return result;
+  };
+
+  const isSameDay = (a: Date, b: Date) => toDayKey(a) === toDayKey(b);
+
+  const getWeekDays = (date: Date) => {
+    const start = startOfWeek(date);
+    return Array.from({ length: 7 }, (_, index) => addDays(start, index));
+  };
+
+  const getMonthDays = (date: Date) => {
+    const firstDayOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+    const start = startOfWeek(firstDayOfMonth);
+    return Array.from({ length: 42 }, (_, index) => addDays(start, index));
+  };
+
+  const calendarAppointments = appointments
+    .map((appointment) => ({
+      appointment,
+      date: parseAppointmentDate(appointment.date_time),
+    }))
+    .filter((item): item is { appointment: Appointment; date: Date } => Boolean(item.date))
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
+
+  const appointmentsByDay = calendarAppointments.reduce<Record<string, Array<{ appointment: Appointment; date: Date }>>>((acc, item) => {
+    const key = toDayKey(item.date);
+    acc[key] = acc[key] || [];
+    acc[key].push(item);
+    return acc;
+  }, {});
+
+  const calendarDays = calendarView === 'week'
+    ? getWeekDays(calendarDate)
+    : getMonthDays(calendarDate);
+
+  const weekRange = getWeekDays(calendarDate);
+  const calendarTitle = calendarView === 'week'
+    ? `${weekRange[0].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} - ${weekRange[6].toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}`
+    : calendarDate.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+
+  const handlePreviousCalendarPeriod = () => {
+    setCalendarDate((current) => calendarView === 'week' ? addDays(current, -7) : addMonths(current, -1));
+  };
+
+  const handleNextCalendarPeriod = () => {
+    setCalendarDate((current) => calendarView === 'week' ? addDays(current, 7) : addMonths(current, 1));
+  };
+
+  const handleTodayCalendar = () => {
+    setCalendarDate(new Date());
+  };
 
   return (
     <Box className="container" sx={{ py: 4 }}>
@@ -729,7 +965,7 @@ export default function Psychologist() {
                     <Typography variant="caption" color="text.disabled">
                       {filterStatus !== 'all'
                         ? 'Tente mudar o filtro.'
-                        : 'Pacientes aparecem quando você inicia um follow-up.'}
+                        : 'Pacientes aparecem quando há follow-up ou consulta agendada.'}
                     </Typography>
                   </Box>
                 ) : (
@@ -868,96 +1104,306 @@ export default function Psychologist() {
 
       {activeTab === 1 && (
         <Box>
-          <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, minHeight: 400 }}>
-            <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                <CalendarMonthIcon color="primary" />
-                <Typography variant="h6" fontWeight={700}>Minha Agenda de Consultas</Typography>
-              </Box>
-              <Button variant="outlined" startIcon={<EventAvailableIcon />}>
-                Adicionar Horário
-              </Button>
-            </Box>
-            <Divider />
-
-            <Box sx={{ p: 2 }}>
-              {loading ? (
-                Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={70} sx={{ mb: 2, borderRadius: 2 }} />)
-              ) : appointments.length === 0 ? (
-                <Box sx={{ py: 8, textAlign: 'center' }}>
-                  <CalendarMonthIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
-                  <Typography variant="h6" color="text.secondary">Nenhuma consulta agendada.</Typography>
-                  <Typography variant="body2" color="text.disabled">Seus horários aparecerão aqui quando os pacientes agendarem.</Typography>
+          <Grid container spacing={3}>
+            <Grid size={{ xs: 12, md: 5 }}>
+              <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3 }}>
+                <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                  <EventAvailableIcon color="primary" />
+                  <Box>
+                    <Typography variant="h6" fontWeight={700}>Minha disponibilidade</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                      Cadastre os horários que poderão ser agendados pelos funcionários.
+                    </Typography>
+                  </Box>
                 </Box>
-              ) : (
-                <Grid container spacing={2}>
-                  {appointments.map(appointment => {
-                    const patientName = getPatientName(appointment.employee);
-                    const initials = getInitials(patientName);
-                    const isCompleted = appointment.status.toLowerCase() === 'completed' || appointment.status.toLowerCase() === 'concluído';
-                    
-                    return (
-                      <Grid size={{ xs: 12, md: 6 }} key={appointment.id}>
-                        <Card variant="outlined" sx={{ 
-                          borderRadius: 2, 
-                          display: 'flex', 
-                          opacity: isCompleted ? 0.7 : 1,
-                          bgcolor: isCompleted ? 'action.hover' : 'background.paper',
-                        }}>
-                          <Box sx={{ 
-                            p: 2, 
-                            display: 'flex', 
-                            flexDirection: 'column', 
-                            alignItems: 'center', 
-                            justifyContent: 'center',
-                            minWidth: 100,
-                            borderRight: '1px solid',
-                            borderColor: 'divider',
-                            bgcolor: isCompleted ? 'transparent' : alpha(theme.palette.primary.main, 0.05)
-                          }}>
-                            <Typography variant="h6" color="primary" fontWeight={700}>
-                              {appointment.date_time.split(' ')[1] || appointment.date_time}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" fontWeight={600}>
-                              {appointment.date_time.split(' ')[0] || 'Hoje'}
-                            </Typography>
-                          </Box>
-                          
-                          <CardContent sx={{ flex: 1, display: 'flex', alignItems: 'center', gap: 2, p: 2, '&:last-child': { pb: 2 } }}>
-                            <Avatar sx={{ bgcolor: getAvatarColor(patientName), width: 40, height: 40 }}>
-                              {initials}
-                            </Avatar>
-                            <Box sx={{ flex: 1 }}>
-                              <Typography variant="subtitle1" fontWeight={600}>{patientName}</Typography>
-                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                <Chip 
-                                  label={appointment.status} 
-                                  size="small" 
-                                  color={isCompleted ? "default" : "primary"}
-                                  variant={isCompleted ? "outlined" : "filled"}
-                                  sx={{ fontSize: 11, height: 20 }}
+                <Divider />
+
+                <Box sx={{ p: 2.5 }}>
+                  <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', mb: 2 }}>
+                    <TextField
+                      inputRef={availabilityInputRef}
+                      label="Novo horário"
+                      type="datetime-local"
+                      value={newAvailabilityDateTime}
+                      onChange={(event) => setNewAvailabilityDateTime(event.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                      inputProps={{ min: minAvailabilityDateTime }}
+                      fullWidth
+                    />
+
+                    <Button
+                      variant="contained"
+                      startIcon={<EventAvailableIcon />}
+                      onClick={handleCreateAvailability}
+                      disabled={!newAvailabilityDateTime || refreshing}
+                      fullWidth
+                    >
+                      Cadastrar horário
+                    </Button>
+                  </Box>
+
+                  {loading ? (
+                    <Box>
+                      {Array.from({ length: 4 }).map((_, index) => (
+                        <Skeleton key={index} height={48} sx={{ mb: 1, borderRadius: 1 }} />
+                      ))}
+                    </Box>
+                  ) : availability.length === 0 ? (
+                    <Box sx={{ py: 4, textAlign: 'center' }}>
+                      <AccessTimeIcon sx={{ fontSize: 42, color: 'text.disabled', mb: 1 }} />
+                      <Typography color="text.secondary">Nenhum horário cadastrado.</Typography>
+                      <Typography variant="caption" color="text.disabled">
+                        Cadastre sua primeira disponibilidade acima.
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <TableContainer component={Paper} variant="outlined" sx={{ borderRadius: 2 }}>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow sx={{ bgcolor: 'action.hover' }}>
+                            <TableCell>Horário</TableCell>
+                            <TableCell>Status</TableCell>
+                            <TableCell align="right">Ação</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {availability.map((slot) => (
+                            <TableRow key={slot.id} hover>
+                              <TableCell>
+                                <Typography variant="body2" fontWeight={600}>{slot.label}</Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {new Date(slot.date_time).toLocaleString('pt-BR')}
+                                </Typography>
+                              </TableCell>
+                              <TableCell>
+                                <Chip
+                                  label={
+                                    slot.status === 'available'
+                                      ? 'Disponível'
+                                      : slot.status === 'booked'
+                                        ? 'Agendado'
+                                        : 'Cancelado'
+                                  }
+                                  color={
+                                    slot.status === 'available'
+                                      ? 'success'
+                                      : slot.status === 'booked'
+                                        ? 'warning'
+                                        : 'default'
+                                  }
+                                  size="small"
                                 />
-                                {appointment.created_at && (
-                                  <Typography variant="caption" color="text.disabled">
-                                    Agendado em: {new Date(appointment.created_at).toLocaleDateString('pt-BR')}
+                              </TableCell>
+                              <TableCell align="right">
+                                <Button
+                                  color="error"
+                                  size="small"
+                                  disabled={slot.status === 'booked' || refreshing}
+                                  onClick={() => handleDeleteAvailability(slot.id)}
+                                >
+                                  Remover
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  )}
+                </Box>
+              </Paper>
+            </Grid>
+
+            <Grid size={{ xs: 12, md: 7 }}>
+              <Paper elevation={0} sx={{ border: '1px solid', borderColor: 'divider', borderRadius: 3, minHeight: 520 }}>
+                <Box sx={{ p: 2.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                    <CalendarMonthIcon color="primary" />
+                    <Box>
+                      <Typography variant="h6" fontWeight={700}>Consultas agendadas</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        Visualize sua agenda por semana ou por mês.
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                    <ToggleButtonGroup
+                      size="small"
+                      exclusive
+                      value={calendarView}
+                      onChange={(_, value: 'week' | 'month' | null) => {
+                        if (value) setCalendarView(value);
+                      }}
+                    >
+                      <ToggleButton value="week">Semana</ToggleButton>
+                      <ToggleButton value="month">Mês</ToggleButton>
+                    </ToggleButtonGroup>
+
+                    <Button variant="outlined" size="small" onClick={handleTodayCalendar}>
+                      Hoje
+                    </Button>
+
+                    <Button variant="outlined" size="small" onClick={handlePreviousCalendarPeriod}>
+                      Anterior
+                    </Button>
+
+                    <Button variant="outlined" size="small" onClick={handleNextCalendarPeriod}>
+                      Próximo
+                    </Button>
+                  </Box>
+                </Box>
+                <Divider />
+
+                <Box sx={{ p: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+                    <Box>
+                      <Typography variant="subtitle1" fontWeight={700} sx={{ textTransform: 'capitalize' }}>
+                        {calendarTitle}
+                      </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {calendarAppointments.length} consulta{calendarAppointments.length === 1 ? '' : 's'} agendada{calendarAppointments.length === 1 ? '' : 's'} no total
+                      </Typography>
+                    </Box>
+
+                    <Button
+                      variant="contained"
+                      startIcon={<EventAvailableIcon />}
+                      onClick={() => availabilityInputRef.current?.focus()}
+                    >
+                      Adicionar horário
+                    </Button>
+                  </Box>
+
+                  {loading ? (
+                    <Box>
+                      {Array.from({ length: 6 }).map((_, index) => (
+                        <Skeleton key={index} height={70} sx={{ mb: 1.5, borderRadius: 2 }} />
+                      ))}
+                    </Box>
+                  ) : (
+                    <Box>
+                      <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+                        gap: 1,
+                        mb: 1,
+                      }}>
+                        {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map((day) => (
+                          <Typography key={day} variant="caption" color="text.secondary" fontWeight={700} textAlign="center">
+                            {day}
+                          </Typography>
+                        ))}
+                      </Box>
+
+                      <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+                        gap: 1,
+                      }}>
+                        {calendarDays.map((day) => {
+                          const key = toDayKey(day);
+                          const dayAppointments = appointmentsByDay[key] || [];
+                          const isToday = isSameDay(day, new Date());
+                          const isCurrentMonth = day.getMonth() === calendarDate.getMonth();
+                          const visibleAppointments = calendarView === 'month'
+                            ? dayAppointments.slice(0, 3)
+                            : dayAppointments;
+                          const hiddenAppointments = dayAppointments.length - visibleAppointments.length;
+
+                          return (
+                            <Paper
+                              key={key}
+                              variant="outlined"
+                              sx={{
+                                p: 1,
+                                borderRadius: 2,
+                                minHeight: calendarView === 'month' ? 126 : 220,
+                                bgcolor: isToday ? alpha(theme.palette.primary.main, 0.06) : 'background.paper',
+                                borderColor: isToday ? 'primary.main' : 'divider',
+                                opacity: calendarView === 'month' && !isCurrentMonth ? 0.45 : 1,
+                                overflow: 'hidden',
+                              }}
+                            >
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.75 }}>
+                                <Typography variant="caption" fontWeight={700} color={isToday ? 'primary.main' : 'text.primary'}>
+                                  {day.getDate()}
+                                </Typography>
+                                {dayAppointments.length > 0 && (
+                                  <Chip
+                                    label={dayAppointments.length}
+                                    size="small"
+                                    color="primary"
+                                    sx={{ height: 18, fontSize: 10 }}
+                                  />
+                                )}
+                              </Box>
+
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                                {visibleAppointments.map(({ appointment, date }) => {
+                                  const patientName = getPatientName(appointment.employee);
+                                  const isCompleted = appointment.status.toLowerCase() === 'completed' || appointment.status.toLowerCase() === 'concluído';
+
+                                  return (
+                                    <Paper
+                                      key={appointment.id}
+                                      elevation={0}
+                                      sx={{
+                                        p: 0.75,
+                                        borderRadius: 1.5,
+                                        bgcolor: isCompleted ? 'action.hover' : alpha(theme.palette.primary.main, 0.08),
+                                        border: '1px solid',
+                                        borderColor: isCompleted ? 'divider' : alpha(theme.palette.primary.main, 0.18),
+                                      }}
+                                    >
+                                      <Typography variant="caption" fontWeight={700} color="primary" display="block">
+                                        {date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                                      </Typography>
+                                      <Typography
+                                        variant="caption"
+                                        fontWeight={600}
+                                        display="block"
+                                        sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                                      >
+                                        {patientName}
+                                      </Typography>
+                                      <Chip
+                                        label={appointment.status}
+                                        size="small"
+                                        color={isCompleted ? 'default' : 'primary'}
+                                        variant={isCompleted ? 'outlined' : 'filled'}
+                                        sx={{ mt: 0.5, height: 18, fontSize: 10 }}
+                                      />
+                                    </Paper>
+                                  );
+                                })}
+
+                                {hiddenAppointments > 0 && (
+                                  <Typography variant="caption" color="primary" fontWeight={700}>
+                                    +{hiddenAppointments} consulta{hiddenAppointments === 1 ? '' : 's'}
                                   </Typography>
                                 )}
                               </Box>
-                            </Box>
-                            <Tooltip title="Acessar Prontuário">
-                              <IconButton size="small" color="primary" sx={{ bgcolor: alpha(theme.palette.primary.main, 0.1) }}>
-                                <AssignmentIndIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    );
-                  })}
-                </Grid>
-              )}
-            </Box>
-          </Paper>
+                            </Paper>
+                          );
+                        })}
+                      </Box>
+
+                      {calendarAppointments.length === 0 && (
+                        <Box sx={{ py: 5, textAlign: 'center' }}>
+                          <CalendarMonthIcon sx={{ fontSize: 48, color: 'text.disabled', mb: 2 }} />
+                          <Typography variant="h6" color="text.secondary">Nenhuma consulta agendada.</Typography>
+                          <Typography variant="body2" color="text.disabled">
+                            As consultas aparecerão no calendário quando funcionários reservarem seus horários disponíveis.
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  )}
+                </Box>
+              </Paper>
+            </Grid>
+          </Grid>
         </Box>
       )}
 

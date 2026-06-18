@@ -7,10 +7,12 @@ from .views import (
     InsightViewSet, RegisterView, UserDetailView,
     AssessmentViewSet, FollowUpViewSet,
     AppointmentViewSet,
+    PsychologistAvailabilityViewSet,
+    PsychologistListView,
     SectorViewSet,
     validate_insight, team_overview, my_points,
     gamification_me, award_gamification_points,
-    UserPasswordChangeView, EmailTokenObtainPairView
+    UserPasswordChangeView, EmailTokenObtainPairView,
 )
 
 router = DefaultRouter()
@@ -24,6 +26,11 @@ router.register(
 router.register(
     r'appointments', AppointmentViewSet,
     basename='appointment'
+)
+router.register(
+    r'psychologist/availability',
+    PsychologistAvailabilityViewSet,
+    basename='psychologist-availability',
 )
 router.register(r'insights', InsightViewSet, basename='insight')
 router.register(r'manager/sectors', SectorViewSet, basename='manager-sectors')
@@ -53,6 +60,11 @@ urlpatterns = [
         'users/me/password/',
         UserPasswordChangeView.as_view(),
         name='user_password_change'
+    ),
+    path(
+        'psychologists/',
+        PsychologistListView.as_view(),
+        name='psychologists_list',
     ),
     path('', include(router.urls)),
     path(

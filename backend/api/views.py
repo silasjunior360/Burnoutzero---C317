@@ -1,15 +1,19 @@
-﻿from rest_framework import generics, viewsets, status, serializers
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.decorators import api_view, permission_classes, action
-from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework.exceptions import PermissionDenied
+﻿from datetime import timedelta
+
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.db.models import Avg, Q
 from django.utils import timezone
 from django.utils.dateparse import parse_date
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
-from datetime import timedelta
+from rest_framework import generics, serializers, status, viewsets
+from rest_framework.decorators import action, api_view, permission_classes
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework_simplejwt.views import TokenObtainPairView
+
 from .models import (
     User,
     Assessment,
@@ -19,15 +23,19 @@ from .models import (
     GamificationPoints,
     GamificationState,
     Sector,
+    PsychologistAvailability,
 )
-
 from .serializers import (
-    UserSerializer, UserCreateSerializer,
-    AssessmentSerializer, FollowUpSerializer,
-    AppointmentSerializer, SectorSerializer
+    EmailTokenObtainPairSerializer,
+    UserSerializer,
+    UserCreateSerializer,
+    AssessmentSerializer,
+    FollowUpSerializer,
+    AppointmentSerializer,
+    SectorSerializer,
+    PsychologistSerializer,
+    PsychologistAvailabilitySerializer,
 )
-from .serializers import EmailTokenObtainPairSerializer
-from rest_framework_simplejwt.views import TokenObtainPairView
 
 
 class EmailTokenObtainPairView(TokenObtainPairView):
@@ -103,23 +111,39 @@ class UserPasswordChangeView(APIView):
         return self._change_password(request)
 
 
+
+
 class AssessmentViewSet(viewsets.ModelViewSet):
     serializer_class = AssessmentSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
+
         if user.role == 'employee':
-            return Assessment.objects.filter(employee=user)
-        elif user.role == 'manager':
+            return Assessment.objects.filter(employee=user).order_by('-assessment_date')
+
+        if user.role == 'manager':
+            scope = _normalize_company_code(user.company_code or user.department)
+            if not scope:
+                return Assessment.objects.none()
+
             employees = User.objects.filter(
-                department=user.department
+                role='employee'
+            ).filter(
+                Q(company_code__iexact=scope) | Q(department__iexact=scope)
             )
-            return Assessment.objects.filter(
-                employee__in=employees
-            )
-        else:
-            return Assessment.objects.all()
+
+            return Assessment.objects.filter(employee__in=employees).order_by('-assessment_date')
+
+        if user.role == 'psychologist':
+            followed_employees = FollowUp.objects.filter(
+                psychologist=user
+            ).values_list('employee_id', flat=True)
+
+            return Assessment.objects.filter(employee_id__in=followed_employees).order_by('-assessment_date')
+
+        return Assessment.objects.none()
 
     def perform_create(self, serializer):
         data = serializer.validated_data
@@ -138,11 +162,126 @@ class AssessmentViewSet(viewsets.ModelViewSet):
             risk = 'low'
 
         assessment = serializer.save(
-            employee=self.request.user, risk_level=risk
+            employee=self.request.user,
+            risk_level=risk,
         )
 
         _generate_insight(self.request.user, assessment)
 
+
+class AppointmentViewSet(viewsets.ModelViewSet):
+    serializer_class = AppointmentSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.role == 'employee':
+            return Appointment.objects.filter(
+                employee=user
+            ).order_by('-created_at')
+
+        if user.role == 'psychologist':
+            full_name = (
+                f'{user.first_name or ""} {user.last_name or ""}'.strip()
+                or user.username
+            )
+
+            return Appointment.objects.filter(
+                Q(psychologist=user) |
+                Q(psychologist_name__iexact=full_name)
+            ).order_by('-created_at')
+
+        return Appointment.objects.none()
+
+    def perform_create(self, serializer):
+        if self.request.user.role != 'employee':
+            raise PermissionDenied('Apenas funcionários podem agendar consultas.')
+
+        availability_id = self.request.data.get('availability_id')
+
+        if not availability_id:
+            raise serializers.ValidationError({
+                'availability_id': 'Informe o horário de disponibilidade.'
+            })
+
+        with transaction.atomic():
+            try:
+                availability = (
+                    PsychologistAvailability.objects
+                    .select_for_update()
+                    .select_related('psychologist')
+                    .get(
+                        id=availability_id,
+                        status='available',
+                        date_time__gte=timezone.now(),
+                    )
+                )
+            except PsychologistAvailability.DoesNotExist:
+                raise serializers.ValidationError({
+                    'availability_id': 'Este horário não está mais disponível.'
+                })
+
+            existing_appointment = Appointment.objects.filter(
+                availability=availability
+            ).exclude(
+                status='cancelled'
+            ).first()
+
+            if existing_appointment:
+                raise serializers.ValidationError({
+                    'availability_id': 'Este horário já está agendado.'
+                })
+
+            psychologist = availability.psychologist
+
+            psychologist_name = (
+                f'{psychologist.first_name or ""} {psychologist.last_name or ""}'.strip()
+                or psychologist.username
+            )
+
+            serializer.validated_data.pop('availability_id', None)
+
+            appointment = serializer.save(
+                employee=self.request.user,
+                psychologist=psychologist,
+                availability=availability,
+                psychologist_name=psychologist_name,
+                date_time=timezone.localtime(
+                    availability.date_time
+                ).strftime('%d/%m/%Y %H:%M'),
+                status='scheduled',
+            )
+
+            availability.status = 'booked'
+            availability.save(update_fields=['status', 'updated_at'])
+
+            FollowUp.objects.get_or_create(
+                psychologist=psychologist,
+                employee=self.request.user,
+                defaults={
+                    'private_notes': '',
+                    'status': 'active',
+                }
+            )
+
+            return appointment
+
+    def destroy(self, request, *args, **kwargs):
+        appointment = self.get_object()
+
+        with transaction.atomic():
+            availability = appointment.availability
+
+            appointment.status = 'cancelled'
+            appointment.availability = None
+            appointment.save(update_fields=['status', 'availability'])
+
+            if availability:
+                availability.status = 'available'
+                availability.save(update_fields=['status', 'updated_at'])
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 class FollowUpViewSet(viewsets.ModelViewSet):
     serializer_class = FollowUpSerializer
@@ -162,38 +301,59 @@ class FollowUpViewSet(viewsets.ModelViewSet):
         serializer.save(psychologist=self.request.user)
 
 
-class AppointmentViewSet(viewsets.ModelViewSet):
-    serializer_class = AppointmentSerializer
+class PsychologistAvailabilityViewSet(viewsets.ModelViewSet):
+    serializer_class = PsychologistAvailabilitySerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
-        if user.role == 'employee':
-            return Appointment.objects.filter(employee=user)
-        return Appointment.objects.none()
+        if user.role == 'psychologist':
+            return PsychologistAvailability.objects.filter(
+                psychologist=user
+            ).order_by('date_time')
+        return PsychologistAvailability.objects.none()
 
     def perform_create(self, serializer):
-        psychologist_name = str(
-            self.request.data.get('psychologist_name', '')
-        ).strip()
-        date_time = str(self.request.data.get('date_time', '')).strip()
-        if Appointment.objects.filter(
-            psychologist_name__iexact=psychologist_name,
-            date_time=date_time,
-            status='scheduled'
-        ).exists():
-            raise serializers.ValidationError(
-                "Este horário já está reservado com este psicólogo."
-            )
-        serializer.save(employee=self.request.user)
+        if self.request.user.role != 'psychologist':
+            raise PermissionDenied('Apenas psicólogos podem cadastrar horários.')
 
-    @action(detail=False, methods=['get'])
-    def taken_slots(self, request):
-        taken = (
-            Appointment.objects.filter(status='scheduled')
-            .values('psychologist_name', 'date_time')
+        serializer.save(
+            psychologist=self.request.user,
+            status='available',
         )
-        return Response(taken)
+
+    def destroy(self, request, *args, **kwargs):
+        availability = self.get_object()
+
+        if availability.status == 'booked':
+            return Response(
+                {'error': 'Não é possível remover um horário já agendado.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        availability.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class PsychologistListView(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = PsychologistSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        queryset = User.objects.filter(
+            role='psychologist',
+            is_active=True,
+        ).order_by('first_name', 'last_name', 'username')
+
+        scope = _normalize_company_code(user.company_code or user.department)
+        if scope:
+            queryset = queryset.filter(
+                Q(company_code__iexact=scope) | Q(department__iexact=scope)
+            )
+
+        return queryset.prefetch_related('availabilities')
+
 
 
 def _latest_assessment_for(user):
